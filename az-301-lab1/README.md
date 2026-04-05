@@ -86,11 +86,11 @@ If Node 1 fails:
 ```
 
 > [!NOTE]
-> Active-Active FortiWeb does not synchronise session state between nodes. Clients may need to re-establish connections during a node failure. For most HTTP/HTTPS applications, this is transparent to end users as browsers retry automatically.
+> Active-Active FortiWeb in this workshop will not synchronise session state between nodes. Clients may need to re-establish connections during a node failure. For most HTTP/HTTPS applications, this is transparent to end users as browsers retry automatically.
 
 ### Why an ARM Template?
 
-The FortiWeb HA deployment involves multiple interdependent Azure resources: two VMs, network interfaces, availability set, load balancer, backend pools, health probes, and load balancing rules. Deploying these manually would take over an hour and introduce configuration errors. The ARM template creates all resources consistently in minutes, and is the Fortinet-recommended deployment method for production HA clusters.
+The FortiWeb HA deployment involves multiple interdependent Azure resources: two VMs, network interfaces, availability set (or availability zone), load balancer, backend pools, health probes, and load balancing rules. Deploying these manually would take over an hour and introduce configuration errors. The ARM template creates all resources consistently in minutes, and is the Fortinet-recommended deployment method for production HA clusters.
 
 ### The Three-Subnet Design
 
@@ -170,7 +170,7 @@ FortiWeb uses three functional subnets in this architecture:
 #### 3.1 Enable Azure Bastion
 
 1. In the **Security** tab:
-   - Toggle **Enable Azure Bastion** to **On**
+   - Select the  **Enable Azure Bastion** box
 
 2. Configure Bastion settings:
 
@@ -193,13 +193,16 @@ FortiWeb uses three functional subnets in this architecture:
 
 1. In the **IP Addresses** tab:
    - **IPv4 address space:** `10.0.0.0/16`
-
+  
+2. In the **Subnets** space:
+   - **Delete** the `default` subnet `10.0.0.0/24`
+  
 #### 4.2 Verify the Bastion Subnet
 
 The `AzureBastionSubnet` should have been created automatically when you enabled Bastion:
 
 - Verify the name is exactly `AzureBastionSubnet` (Azure requires this exact name)
-- Set the address range to `10.0.0.0/26`
+- Set the address range to `10.0.0.0/26` clicking on the edit pencil in front of it.
 
 > [!WARNING]
 > The Bastion subnet name must be exactly `AzureBastionSubnet` — Azure will reject any other name. Do not rename it.
@@ -264,13 +267,558 @@ The `AzureBastionSubnet` should have been created automatically when you enabled
 
 ### Validation
 
-- [ ] VNet `vnet-app-protection` created in Canada Central
-- [ ] `AzureBastionSubnet` 10.0.0.0/24 present
-- [ ] `external` subnet 10.0.1.0/24 present
-- [ ] `internal` subnet 10.0.2.0/24 present
-- [ ] `protected` subnet 10.0.3.0/24 present
+- ✅ VNet `vnet-app-protection` created in Canada Central
+- ✅ `AzureBastionSubnet` 10.0.0.0/24 present
+- ✅ `external` subnet 10.0.1.0/24 present
+- ✅ `internal` subnet 10.0.2.0/24 present
+- ✅ `protected` subnet 10.0.3.0/24 present
 
 ---
+
+## Part C: Prepare for ARM Template Deployment
+
+This template is self-contained. Unlike traditional FortiWeb HA deployments, it does not require an Azure App Registration or service principal — HA operations are handled directly by the template at deploy time. The only thing you need before deploying is your two FortiFlex tokens.
+
+### Step 6: Locate Your FortiFlex Tokens
+
+Each FortiWeb node requires its own FortiFlex token. The tokens are applied directly as ARM template parameters and activate licensing automatically during the first boot sequence.
+
+#### 6.1 Retrieve Your Tokens
+
+Locate the FortiFlex Tokens in your welcome e-mail:
+
+| Token | Description |
+| --- | --- |
+| **FortiFlex Token A** | Applied to FortiWeb Node 1 (`fweb-ha-vm1`) |
+| **FortiFlex Token B** | Applied to FortiWeb Node 2 (`fweb-ha-vm2`) |
+
+> [!TIP]
+> Open a text editor (Notepad, VS Code) and paste both tokens now. You will enter them in Step 8 — they are long strings and easy to mistype.  
+
+> [!NOTE]
+> **How FortiFlex activation works in this template:** The tokens are injected into each VM's `customData` at deployment time. When FortiWeb boots for the first time, it reads the token from `customData` and contacts Fortinet's licensing servers automatically. No manual activation step is required in the GUI.
+
+### Validation
+
+- ✅ FortiFlex Token A copied and saved
+- ✅ FortiFlex Token B copied and saved
+
+---
+
+## Part D: Deploy the FortiWeb HA Cluster
+
+### Step 7: Create the ARM Template Spec
+
+#### 7.1 Navigate to Template Specs
+
+1. Navigate to your resource group: `redwood-app-protection-rg`
+2. Click **+ Create**
+3. In the **Search the Marketplace** field, type `template specs`
+4. In the **Template specs** in the results
+5. Click **+ Create > Template Specs**
+
+#### 7.2 Configure the Template Spec
+
+1. In the **Basics** tab, configure:
+
+| Setting | Value |
+|---|---|
+| **Subscription** | Your Azure subscription |
+| **Resource group** | `redwood-app-protection-rg` |
+| **Name** | `fortiweb-ha-template` |
+| **Location** | `Canada Central` |
+| **Version** | `v1.0.0` |
+
+2. Click **Next: Edit Template**
+
+#### 7.3 Paste the ARM Template Content
+
+1. In the template editor, select all existing content and delete it
+2. Open the following URL in a new browser tab:
+```
+https://raw.githubusercontent.com/regisftm/AZ-301/refs/heads/main/arm-template/deploy_fwb_ha.json
+```
+
+3. Select all content (`Ctrl+A`) and copy it (`Ctrl+C`)
+4. Return to the Azure Portal template editor and paste (`Ctrl+V`)
+5. Click **Review + create**
+6. Click **Create**
+
+> [!NOTE]
+> The template spec is a reusable container for the ARM template. Creating it first means
+> you can redeploy the same template in future workshops without re-pasting the JSON.
+
+### Step 8: Deploy the FortiWeb HA Cluster
+
+#### 8.1 Open the Template for Deployment
+
+1. After creation, click **fortiweb-ha-template** in the template spec list
+2. Click **Deploy**
+
+#### 8.2 Configure Basics
+
+| Setting | Value |
+|---|---|
+| **Subscription** | Your Azure subscription |
+| **Resource group** | `redwood-app-protection-rg` |
+| **Region** | `Canada Central` |
+
+#### 8.3 Configure Template Parameters
+
+**Resource Naming:**
+
+| Parameter | Value |
+|---|---|
+| **Resource Name Prefix** | `fweb-ha` |
+
+> [!NOTE]
+> The prefix `fweb-ha` is used to name all resources created by this template. Your
+> FortiWeb VMs will be named `fweb-ha-vm1` and `fweb-ha-vm2`, the load balancer
+> `fweb-ha-loadbalance`, and so on. Keep this prefix — it is referenced throughout
+> the remaining labs.
+
+**VM Configuration:**
+
+| Parameter | Value |
+|---|---|
+| **Vm Sku** | `Standard_F2s_v2` |
+| **Availability Options** | `Availability Set` |
+| **Accelerated Networking** | `false` |
+| **Vm Admin Username** | `fortiuser` |
+| **Vm Admin Password** | Create a strong password — save it securely |
+| **Vm Image Version** | `latest` |
+
+> [!WARNING]
+> The admin username cannot be `admin` or `root` — Azure will reject these. Use
+> `fortiuser` as shown above.
+
+> [!WARNING]
+> The password must satisfy at least 3 of these 4 conditions: uppercase characters,
+> lowercase characters, a digit, a special character. Save this password — you will
+> need it to access both FortiWeb nodes throughout the workshop.
+
+**Network Configuration:**
+
+| Parameter | Value |
+|---|---|
+| **Vnet New Or Existing** | `existing` |
+| **Vnet Resource Group** | `redwood-app-protection-rg` |
+| **Vnet Name** | `vnet-app-protection` |
+| **Vnet Address Prefix** | `10.0.0.0/16` |
+| **Vnet Subnet1 Name** | `external` |
+| **Vnet Subnet1 Prefix** | `10.0.1.0/24` |
+| **Vnet Subnet2 Name** | `internal` |
+| **Vnet Subnet2 Prefix** | `10.0.2.0/24` |
+
+**Load Balancer:**
+
+| Parameter | Value |
+|---|---|
+| **Load Balancer Type** | `Public` |
+
+**FortiFlex Licensing:**
+
+| Parameter | Value |
+|---|---|
+| **Fortiweb License Forti Flex A** | Your FortiFlex Token A (from Step 6.1) |
+| **Fortiweb License Forti Flex B** | Your FortiFlex Token B (from Step 6.1) |
+
+> [!NOTE]
+> The tokens are injected into each VM's `customData` at deployment time. When each
+> FortiWeb node boots for the first time, it reads the token and contacts Fortinet's
+> licensing servers automatically — no manual activation in the GUI is required.
+
+#### 8.4 Deploy
+
+1. Click **Review + create**
+2. Review all parameters — pay particular attention to the VNet name and subnet names,
+   which must match exactly what you created in Part B
+3. Click **Create**
+
+> [!NOTE]
+> The deployment typically takes **8–12 minutes**. The template is simultaneously
+> creating: an availability set, two FortiWeb VMs, four network interfaces, three public
+> IP addresses, a load balancer with backend pool, health probes, and load balancing
+> rules. ☕
+
+#### 8.5 Monitor Deployment Progress
+
+1. Click the notification bell 🔔 at the top right to see deployment status
+2. For detailed progress, navigate to `redwood-app-protection-rg > Deployments`
+
+### Validation
+
+When deployment completes, verify the following resources exist in
+`redwood-app-protection-rg`:
+
+- [ ] `fweb-ha-vm1` — FortiWeb Node 1 (VM)
+- [ ] `fweb-ha-vm2` — FortiWeb Node 2 (VM)
+- [ ] `fweb-ha-availabilitySet` — Availability set containing both VMs
+- [ ] `fweb-ha-loadbalance` — External Load Balancer
+- [ ] `fweb-ha-loadbalance-IP` — Load Balancer public IP
+- [ ] `fweb-ha-nicPublic-IP1` and `fweb-ha-nicPublic-IP2` — VM management public IPs
+- [ ] `fweb-ha-securityGroup` — Network Security Group
+
+---
+
+## Part E: Access FortiWeb and Verify the Cluster
+
+### Step 9: Locate the FortiWeb Management IPs
+
+Each FortiWeb node has its own public IP for management access on port1 (the `external`
+subnet interface).
+
+#### 9.1 Find the Public IPs
+
+1. Navigate to `redwood-app-protection-rg`
+2. Locate the following public IP resources and note their assigned IP addresses:
+
+| Resource | Purpose |
+|---|---|
+| `fweb-ha-nicPublic-IP1` | Management access — FortiWeb Node 1 (`fweb-ha-vm1`) |
+| `fweb-ha-nicPublic-IP2` | Management access — FortiWeb Node 2 (`fweb-ha-vm2`) |
+| `fweb-ha-loadbalance-IP` | Application traffic — shared VIP for both nodes |
+
+> [!TIP]
+> Open your text editor and record all three IP addresses now. You will use the
+> management IPs in Steps 10–13, and the load balancer IP in Lab 4 when you
+> configure and test traffic steering.
+
+### Step 10: Connect to the FortiWeb GUI
+
+#### 10.1 Open the FortiWeb Management Interface — Node 1
+
+1. Open a new browser tab and navigate to:
+```
+https://<fweb-ha-nicPublic-IP1>:8443
+```
+
+2. You will see a certificate warning — this is expected (self-signed certificate)
+3. Click **Advanced** → **Proceed** (or the equivalent in your browser)
+
+#### 10.2 Log In
+
+| Field | Value |
+|---|---|
+| **Username** | `fortiuser` |
+| **Password** | The VM admin password you set in Step 8.3 |
+
+> [!NOTE]
+> `fortiuser` is the VM operating system administrator account, provisioned by Azure
+> during deployment. You will configure the FortiWeb `admin` account password separately
+> in Step 11.
+
+#### 10.3 Verify Licensing Status
+
+After login, navigate to **System > Status > Status** and confirm:
+
+- The **Licence** section shows a valid FortiFlex licence
+- The VM serial number is displayed
+
+> [!NOTE]
+> If the licence status shows as **Pending** or **Unlicensed**, wait 2–3 minutes and
+> refresh the page. The node may still be completing its first-boot activation sequence.
+> The FortiWeb VM must have internet connectivity to reach Fortinet's licensing servers —
+> if activation does not complete within 5 minutes, check that the NSG allows outbound
+> traffic.
+
+### Step 11: Configure the FortiWeb Admin Account
+
+The FortiWeb `admin` account is the primary management account for all GUI and CLI
+configuration tasks. On Azure deployments, this account has no password set by default
+and must be configured before use.
+
+#### 11.1 Open the CLI Console
+
+1. In the FortiWeb GUI, click the **CLI Console** icon in the top-right toolbar
+
+#### 11.2 Set the Admin Password on Node 1
+```
+config system admin
+    edit "admin"
+        set password "YourStrongPassword1!"
+    next
+end
+```
+
+> [!WARNING]
+> Replace `YourStrongPassword1!` with a strong password of your choice. The `admin`
+> account password **must not be empty** on Azure-deployed FortiWeb instances. You will
+> use the `admin` account for all configuration tasks in Labs 2 through 5 — save it now.
+
+#### 11.3 Set the Admin Password on Node 2
+
+1. Open a new browser tab and navigate to:
+```
+https://<fweb-ha-nicPublic-IP2>:8443
+```
+
+2. Log in with `fortiuser` credentials
+3. Repeat Steps 11.1 and 11.2 using the **same** `admin` password
+
+> [!NOTE]
+> Use the same `admin` password on both nodes. In Lab 2 you will configure
+> configuration replication from Node 1 to Node 2 — consistent credentials simplify
+> that process.
+
+### Step 12: Verify HA Cluster Status
+
+#### 12.1 Check HA Settings — Node 1
+
+1. In the FortiWeb GUI on Node 1, navigate to **System > High Availability > Settings**
+2. Verify the following values, which were injected automatically by the ARM template:
+
+| Setting | Expected Value |
+|---|---|
+| **Mode** | `Active-Active High Volume` |
+| **Group Name** | `az-301-ha-group` |
+| **Group ID** | `5` |
+| **Override** | `Disabled` |
+
+> [!NOTE]
+> These settings were configured automatically via the `customData` parameter during VM
+> provisioning. You do not need to modify them — this is the expected Active-Active
+> configuration for this workshop.
+
+#### 12.2 Check HA Settings — Node 2
+
+1. Switch to the browser tab for Node 2
+2. Navigate to **System > High Availability > Settings**
+3. Verify the same values as Node 1 — both nodes must have identical HA group settings
+   for the cluster to form correctly
+
+### Step 13: Verify the Azure Load Balancer
+
+#### 13.1 Check the Backend Pool
+
+1. In the Azure Portal, navigate to `redwood-app-protection-rg`
+2. Click on **fweb-ha-loadbalance**
+3. Click **Settings > Backend pools**
+4. Click on **FwbHaLBBackendAddrPool**
+5. Verify both `fweb-ha-vm1` and `fweb-ha-vm2` are listed as backend pool members
+
+#### 13.2 Check Health Probe Status
+
+1. Click **Monitoring > Insights** or navigate to **Settings > Load balancing rules**
+2. Verify both nodes are responding to health probes on ports 80 and 443
+
+> [!NOTE]
+> If a node shows as **Unhealthy**, verify the VM is in **Running** state and has
+> completed its boot sequence. Health probe failures during initial deployment typically
+> resolve within 2–3 minutes. The NSG created by the template already allows inbound
+> traffic on ports 80, 443, 8080, and 8443 — no additional NSG rules are needed.
+
+### Validation
+
+- [ ] FortiWeb GUI accessible on both nodes at port 8443
+- [ ] FortiFlex licences show as valid on both nodes
+- [ ] `admin` account password configured on both nodes
+- [ ] HA settings match on both nodes (`az-301-ha-group`, Group ID `5`)
+- [ ] Azure Load Balancer backend pool shows both nodes
+- [ ] Health probes responding on ports 80 and 443
+
+---
+
+## Challenge! ⚔️
+
+The External Load Balancer distributes incoming traffic across both FortiWeb nodes using
+a hash-based algorithm. However, web application sessions often span multiple HTTP
+requests — and all requests for the same session must reach the **same** FortiWeb node to
+maintain session state. What Azure Load Balancer feature ensures this, and what are its
+limitations in an Active-Active design?
+
+---
+
+## Lab 1 Complete! 🎉
+
+### What You've Accomplished
+
+✅ **Resource Group Created:**
+- `redwood-app-protection-rg` in Canada Central
+
+✅ **Virtual Network Deployed:**
+- `vnet-app-protection` (10.0.0.0/16)
+- Four subnets: `AzureBastionSubnet`, `external`, `internal`, `protected`
+
+✅ **Azure Bastion Configured:**
+- Browser-based secure access to private VMs — no public IPs required on app servers
+
+✅ **FortiWeb HA Cluster Deployed via ARM Template:**
+- `fweb-ha-vm1` and `fweb-ha-vm2` in Active-Active mode
+- Azure External Load Balancer (`fweb-ha-loadbalance`) distributing traffic
+- FortiFlex tokens activated automatically on first boot
+- Both nodes in Availability Set for SLA coverage
+
+✅ **Initial Configuration Completed:**
+- Management access verified on both nodes
+- FortiWeb `admin` password configured on both nodes
+- HA cluster settings verified (`az-301-ha-group`, Group ID `5`)
+- Azure Load Balancer backend pool confirmed healthy
+
+### Architecture Review
+```text
+redwood-app-protection-rg (Canada Central)
+│
+├── vnet-app-protection (10.0.0.0/16)
+│   ├── AzureBastionSubnet  (10.0.0.0/24)
+│   ├── external            (10.0.1.0/24)  ← FortiWeb port1 (management + traffic)
+│   ├── internal            (10.0.2.0/24)  ← FortiWeb port2 (to app servers)
+│   └── protected           (10.0.3.0/24)  ← App servers [deployed in Lab 3]
+│
+├── bas-app-protection                      ← Azure Bastion
+├── pip-bas-app-protection                  ← Bastion public IP
+│
+├── fweb-ha-loadbalance (External LB)       ← Ports 80/443 — fweb-ha-loadbalance-IP
+│   └── FwbHaLBBackendAddrPool
+│       ├── fweb-ha-vm1 (Node 1)           ← fweb-ha-nicPublic-IP1
+│       └── fweb-ha-vm2 (Node 2)           ← fweb-ha-nicPublic-IP2
+│
+├── fweb-ha-availabilitySet
+├── fweb-ha-securityGroup
+└── [App servers — deployed in Lab 3]
+```
+
+### Key Takeaways
+
+1. **ARM templates eliminate deployment errors:** Multi-resource HA deployments have many
+   interdependencies. Templates ensure consistent, repeatable deployments that match
+   Fortinet's reference architecture.
+
+2. **FortiFlex via customData:** Tokens are injected at deployment time and activate
+   automatically on first boot. No storage accounts, no manual GUI activation, no service
+   principal required — this is the simplest BYOL deployment path for FortiWeb on Azure.
+
+3. **Active-Active means both nodes are always working:** Unlike the Active-Passive
+   FortiGate HA in AZ-102, there is no standby node sitting idle. Both FortiWeb nodes
+   inspect traffic simultaneously — configuration replication (Lab 2) is what keeps
+   them in sync.
+
+4. **Three public IPs serve different purposes:** The load balancer IP (`fweb-ha-loadbalance-IP`)
+   is the application VIP — clients connect here. The node IPs (`fweb-ha-nicPublic-IP1`,
+   `fweb-ha-nicPublic-IP2`) are management-only — used only for GUI and SSH access.
+
+5. **Azure Bastion protects your app servers:** The `protected` subnet has no internet
+   exposure. Bastion provides browser-based SSH access to app servers in Lab 3 without
+   requiring public IPs on those VMs.
+
+### Validation Checklist
+
+Before proceeding to Lab 2, verify:
+
+**Infrastructure:**
+- [ ] `redwood-app-protection-rg` exists in Canada Central
+- [ ] `vnet-app-protection` has all four subnets with correct CIDRs
+- [ ] Azure Bastion deployed (`bas-app-protection`)
+
+**FortiWeb Cluster:**
+- [ ] `fweb-ha-vm1` and `fweb-ha-vm2` both running
+- [ ] GUI accessible on both nodes at port 8443
+- [ ] FortiFlex licences valid on both nodes
+- [ ] `admin` account password set on both nodes
+- [ ] HA settings match: mode `Active-Active High Volume`, group `az-301-ha-group`, ID `5`
+- [ ] Load Balancer backend pool shows both nodes healthy
+
+### Next Steps
+
+Ready for **Lab 2: FortiWeb Configuration Replication!**
+
+In Lab 2, you will:
+
+- Understand why Active-Active FortiWeb requires explicit configuration replication
+- Designate Node 1 (`fweb-ha-vm1`) as the configuration **Server**
+- Designate Node 2 (`fweb-ha-vm2`) as the configuration **Client**
+- Trigger a manual sync and verify that Node 2 mirrors Node 1's configuration
+- Establish the replication workflow you will follow after every configuration change
+  in Labs 3, 4, and 5
+
+---
+
+## Troubleshooting Reference
+
+### Issue: ARM Template Deployment Fails
+
+Navigate to `redwood-app-protection-rg > Deployments`, click the failed deployment, and
+read the **Error** section — it typically identifies the exact parameter causing the
+failure.
+
+**Common causes:**
+
+- **VNet or subnet name mismatch:** The template parameters `vnetName`, `vnetSubnet1Name`,
+  and `vnetSubnet2Name` must match exactly what you created in Part B — including case
+- **Resource group mismatch:** Ensure `vnetResourceGroup` matches `redwood-app-protection-rg`
+  exactly
+- **Invalid FortiFlex token format:** Tokens are long alphanumeric strings — paste them
+  rather than typing manually
+- **VM SKU not available:** `Standard_F2s_v2` may not be available in all Azure
+  subscriptions — check quota under **Subscriptions > Usage + quotas**
+
+### Issue: Cannot Access FortiWeb GUI
+
+1. Verify you are using `https://` and port `8443` (not 443 or 8080)
+2. Accept the certificate warning — the self-signed certificate is expected
+3. Verify the VM shows **Running** state (not **Starting** or **Deallocated**)
+4. The NSG `fweb-ha-securityGroup` created by the template already allows port 8443
+   inbound — if access still fails, verify no other NSG is applied to the subnet
+
+### Issue: FortiFlex Licence Not Activating
+
+1. Wait 5 minutes — first-boot customData processing takes time
+2. Verify the FortiWeb VM has internet connectivity (outbound to Fortinet's servers)
+3. Check that your FortiFlex token has not already been consumed by another VM
+4. Navigate to **System > Status** and look for any licence error messages
+5. If needed, activate manually via CLI console:
+```
+   execute forticloud-vm activate <your-token>
+```
+
+### Issue: HA Settings Not Showing Expected Values
+
+The HA settings (`az-301-ha-group`, Group ID `5`) are configured via `customData` during
+first boot. If they are missing:
+
+1. Verify the VM completed its first boot successfully — check **Boot diagnostics** in
+   the Azure Portal under the VM resource
+2. Reboot the VM from the Azure Portal and wait 3–4 minutes
+3. Reconnect to the GUI and recheck **System > High Availability > Settings**
+
+### Issue: Load Balancer Shows Nodes as Unhealthy
+
+1. Wait 3–5 minutes after deployment — nodes take time to fully boot and begin responding
+   to health probes
+2. Verify both VMs are in **Running** state
+3. The template configures health probes on TCP ports 80 and 443 — verify FortiWeb is
+   listening on these ports (it does by default)
+4. Confirm the NSG `fweb-ha-securityGroup` has not been modified — it must allow inbound
+   traffic on ports 80 and 443 from `168.63.129.16` (Azure's health probe source IP)
+
+---
+
+*Lab Guide Version 1.0 — January 2025*
+
+*Next: [Lab 2 — FortiWeb Configuration Replication](/az-301-lab2/README.md)*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Part C: Prepare for ARM Template Deployment
 
@@ -315,6 +863,18 @@ Locate and save the following from your Student Resources:
 - [ ] App Registration client secret copied
 
 ---
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Part D: Deploy the FortiWeb HA Cluster
 

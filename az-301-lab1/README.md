@@ -581,7 +581,7 @@ You will use the internal IP address of the FortiWeb `fweb-ha-vm1` to configure 
 
 ## Challenge! ⚔️
 
-The External Load Balancer distributes incoming traffic across both FortiWeb nodes using a hash-based algorithm. However, web application sessions often span multiple HTTP requests — and all requests for the same session must reach the **same** FortiWeb node to maintain session state. What Azure Load Balancer feature ensures this, and what are its limitations in an Active-Active design?
+The External Load Balancer distributes incoming traffic across both FortiWeb nodes using a hash-based algorithm. However, web application sessions often span multiple HTTP requests — and all requests for the same session must reach the **same** FortiWeb node to maintain session state. What Azure Load Balancer feature ensures this? Configure the external loadbalancer properly.
 
 ---
 
@@ -635,43 +635,35 @@ redwood-app-protection-rg (Canada Central)
 
 ### Key Takeaways
 
-1. **ARM templates eliminate deployment errors:** Multi-resource HA deployments have many
-   interdependencies. Templates ensure consistent, repeatable deployments that match
-   Fortinet's reference architecture.
+1. **ARM templates eliminate deployment errors:** Multi-resource HA deployments have many interdependencies. Templates ensure consistent, repeatable deployments that match Fortinet's reference architecture.
 
-2. **FortiFlex via customData:** Tokens are injected at deployment time and activate
-   automatically on first boot. No storage accounts, no manual GUI activation required —
-   this is the simplest BYOL deployment path for FortiWeb on Azure.
+2. **FortiFlex via customData:** Tokens are injected at deployment time and activate automatically on first boot. No storage accounts, no manual GUI activation required — this is the simplest BYOL deployment path for FortiWeb on Azure.
 
-3. **Active-Active means both nodes are always working:** Unlike the Active-Passive
-   FortiGate HA in AZ-102, there is no standby node sitting idle. Both FortiWeb nodes
-   inspect traffic simultaneously — configuration replication keeps them in sync.
+3. **Active-Active means both nodes are always working:** Unlike the Active-Passive FortiGate HA in AZ-102, there is no standby node sitting idle. Both FortiWeb nodes inspect traffic simultaneously — configuration replication keeps them in sync.
 
-4. **Server/Client replication is manual and intentional:** You control when Node 2
-   receives updates. This means Node 1 is always your authoritative configuration source —
-   make all changes there first, then sync.
+4. **Server/Client replication is manual and intentional:** You control when Node 2 receives updates. This means Node 1 is always your authoritative configuration source — make all changes there first, then sync.
 
-5. **Three public IPs serve different purposes:** The load balancer IP
-   (`fweb-ha-loadbalance-IP`) is the application VIP — clients connect here. The node IPs
-   (`fweb-ha-nicPublic-IP1`, `fweb-ha-nicPublic-IP2`) are for management access only.
+5. **Three public IPs serve different purposes:** The load balancer IP   (`fweb-ha-loadbalance-IP`) is the application VIP — clients connect here. The node IPs (`fweb-ha-nicPublic-IP1`, `fweb-ha-nicPublic-IP2`) are for management access only.
 
 ### Validation Checklist
 
 Before proceeding to Lab 2, verify:
 
 **Infrastructure:**
-- [ ] `redwood-app-protection-rg` exists in Canada Central
-- [ ] `vnet-app-protection` has all four subnets with correct CIDRs
-- [ ] Azure Bastion deployed (`bas-app-protection`)
+- ✅ `redwood-app-protection-rg` exists in Canada Central
+- ✅ `vnet-app-protection` has all four subnets with correct CIDRs
+- ✅ Azure Bastion deployed (`bas-app-protection`)
 
 **FortiWeb Cluster:**
-- [ ] `fweb-ha-vm1` and `fweb-ha-vm2` both running
-- [ ] GUI accessible on both nodes at port 8443
-- [ ] FortiFlex licences valid on both nodes
-- [ ] Node 1 configured as configuration Server (port 5199)
-- [ ] Node 2 configured as configuration Client pointing to Node 1
-- [ ] Initial configuration sync completed successfully
-- [ ] Azure Load Balancer backend pool shows both nodes healthy
+- ✅ `fweb-ha-vm1` and `fweb-ha-vm2` both running
+- ✅ GUI accessible on both nodes at port 8443
+- ✅ FortiFlex licences valid on both nodes
+- ✅ Node 1 configured as configuration Server (port 996)
+- ✅ Node 2 configured as configuration Client pointing to Node 1
+- ✅ Initial configuration sync completed successfully
+
+> [!NOTE]
+> The loadbalnacer will show both FortWeb backends as `Down` as we don't have the application server in place yet. The application server deployment will be done in Lab 2.
 
 ### Next Steps
 
@@ -690,45 +682,36 @@ In Lab 2, you will:
 
 ### Issue: ARM Template Deployment Fails
 
-Navigate to `redwood-app-protection-rg > Deployments`, click the failed deployment, and
-read the **Error** section — it typically identifies the exact parameter causing the
-failure.
+Navigate to `redwood-app-protection-rg > Deployments`, click the failed deployment, and read the **Error** section — it typically identifies the exact parameter causing the failure.
 
 **Common causes:**
 
-- **VNet or subnet name mismatch:** The template parameters `vnetName`, `vnetSubnet1Name`,
-  and `vnetSubnet2Name` must match exactly what you created in Part B — including case
-- **Resource group mismatch:** Ensure `vnetResourceGroup` is set to
-  `redwood-app-protection-rg` exactly
-- **Invalid FortiFlex token format:** Tokens are long alphanumeric strings — paste them
-  rather than typing manually
+- **VNet or subnet name mismatch:** The template parameters `vnetName`, `vnetSubnet1Name`, and `vnetSubnet2Name` must match exactly what you created in Part B — including case - **Resource group mismatch:** Ensure `vnetResourceGroup` is set to `redwood-app-protection-rg` exactly
 - **VM SKU not available:** `Standard_F2s_v2` may not be available in all Azure
-  subscriptions — check quota under **Subscriptions > Usage + quotas**
+subscriptions — check quota under **Subscriptions > Usage + quotas**
 
 ### Issue: Cannot Access FortiWeb GUI
 
 1. Verify you are using `https://` and port `8443` (not 443 or 8080)
 2. Accept the certificate warning — the self-signed certificate is expected
 3. Verify the VM shows **Running** state (not **Starting** or **Deallocated**)
-4. The NSG `fweb-ha-securityGroup` created by the template already allows port 8443
-   inbound — if access still fails, verify no other NSG is applied to the subnet
+4. The NSG `fweb-ha-securityGroup` created by the template already allows port 8443 inbound — if access still fails, verify no other NSG is applied to the subnet
 
 ### Issue: FortiFlex Licence Not Activating
 
 1. Wait 5 minutes — first-boot `customData` processing takes time
 2. Verify the FortiWeb VM has internet connectivity (outbound to Fortinet's servers)
-3. Check that your FortiFlex token has not already been consumed by another VM
-4. Navigate to **System > Status** and look for any licence error messages
+3. Check that your FortiFlex token has not already been consumed by another VM (check with the instructor)
+4. Navigate to **Dashboard > Status > Licenses** and look for any licence error messages
 
 ### Issue: Configuration Sync Fails
 
-1. Verify Node 1's public IP is entered correctly on Node 2's Client configuration
-2. Confirm port 5199 is not blocked between the two nodes — the NSG created by the
-   template allows all inbound traffic between VMs in the same VNet
-3. Verify both nodes are in **Running** state before attempting sync
-4. Check **System > High Availability > Settings > Manager** on Node 1 — confirm it
-   shows the Server role is active
+1. Verify Node 1's (`fweb-ha-vm1`) private IP is entered correctly on Node 2's (`fweb-ha-vm2`) Client configuration
+2. Verify both nodes are in **Running** state before attempting sync
+3. Check **System > High Availability > Settings > Manager** on Node 1 — confirm it shows the Server role is active
+4. Open the console on `fweb-ha-vm1` and execute `get system manager` and `get system manager-status` to verify the configurations and status of both nodes
 
+<!--
 ### Issue: Load Balancer Shows Nodes as Unhealthy
 
 1. Wait 3–5 minutes after deployment — nodes take time to fully boot
@@ -737,9 +720,10 @@ failure.
    on these ports by default
 4. Confirm the NSG `fweb-ha-securityGroup` has not been modified — it must allow
    inbound traffic from `168.63.129.16` (Azure's health probe source IP)
+-->
 
 ---
 
-*Lab Guide Version 1.0 — January 2025*
+*Lab Guide Version 1.0 — April 2026*
 
 *Next: [Lab 2 — Application Server Deployment](/az-301-lab2/README.md)*

@@ -449,7 +449,7 @@
                             "protocol": "Tcp",
                             "frontendPort": 80,
                             "backendPort": 80,
-                            "enableFloatingIP": true,
+                            "enableFloatingIP": false,
                             "idleTimeoutInMinutes": 4,
                             "probe": {
                                 "id": "[concat(variables('lbResourceId'), '/probes/probeHTTP')]"
@@ -468,7 +468,7 @@
                             "protocol": "Tcp",
                             "frontendPort": 443,
                             "backendPort": 443,
-                            "enableFloatingIP": true,
+                            "enableFloatingIP": false,
                             "idleTimeoutInMinutes": 4,
                             "probe": {
                                 "id": "[concat(variables('lbResourceId'), '/probes/probeHTTPS')]"

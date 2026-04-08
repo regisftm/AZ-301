@@ -361,11 +361,18 @@ All configuration objects created in this lab (Server Pool, Virtual Server, Serv
 > [!NOTE]
 > If any objects are missing on `fweb-ha-vm2` check the sync status. Allow up to 60 seconds for changes to propagate.
 
+#### 5.3 Verify the application servers health on FortiWeb
+
+1. Navigate to **Dashboard > Status > FortiView Topology**
+2. Observe the status of each application server in the graph under the **Single Server/Server Pool** tab
+3. Experiment by switching the view type
+
 ### Validation
 
 - [x] `pool-redwood-app` present on `fweb-ha-vm2` with both members
 - [x] `vs-redwood-app` present on `fweb-ha-vm2`
 - [x] `policy-redwood-app` present and enabled on `fweb-ha-vm2`
+- [x] Both application servers appears as healthy in the **FortiView Topology**
 
 ---
 
@@ -385,46 +392,47 @@ All configuration objects created in this lab (Server Pool, Virtual Server, Serv
 #### 6.2 Access the Application
 
 1. Open a new browser tab
-2. Navigate to:
-
-http://<fweb-ha-loadbalance-IP>
-
-3. You should see the Redwood Industries demo application — a coloured gradient page
-   with a server name and **Service Online** badge
+2. Navigate to: `http://<fweb-ha-loadbalance-IP>`
+3. You should see the Redwood Industries demo application — a coloured gradient page with a server name and **Service Online** badge
 
 > [!NOTE]
-> If the page does not load immediately, wait 30 seconds and refresh. The Azure Load
-> Balancer health probes need to confirm both FortiWeb nodes are healthy before
-> forwarding traffic.
+> If the page does not load immediately, wait 30 seconds and refresh. The Azure Load Balancer health probes need to confirm both FortiWeb nodes are healthy before forwarding traffic.
 
 #### 6.3 Confirm Load Balancing Across Both Application Servers
 
-The demo application displays the **hostname of the server that served the request**. By
-refreshing the page multiple times, you should see the server name alternate between
-`app-server-1` and `app-server-2` — confirming that FortiWeb's Round Robin pool is
-distributing traffic across both backends.
-
-1. Refresh the browser page 4–6 times
-2. Observe the server name changing between requests
+The demo application displays the **hostname of the server that served the request**. By refreshing the page after waiting about 2 minutes, you should see the server name alternate between `app-server-1` and `app-server-2` — confirming that FortiWeb's Round Robin pool is distributing traffic across both backends.
 
 > [!NOTE]
-> The Azure External Load Balancer uses a 5-tuple hash for session persistence, which
-> means consecutive requests from the same browser may land on the same FortiWeb node.
-> To observe the Round Robin distribution across both **application servers**, try
-> accessing the URL from different browsers, devices, or using an incognito window.
+> The Azure External Load Balancer uses a 5-tuple hash for session persistence, which means consecutive requests from the same browser may land on the same FortiWeb node. To observe the Round Robin distribution across both **application servers**, try accessing the URL from different browsers, devices, or using an incognito window.
+
+1. Refresh the browser page
+2. Observe the server name changing between requests
 
 #### 6.4 Verify FortiWeb is in the Traffic Path
 
 Confirm that FortiWeb is actively proxying requests — not just passing traffic through.
 
-1. On `fweb-ha-vm1`, navigate to **Log > Log Access > Attack Log**
-2. You should see entries for the requests you just made, even though no attacks
-   occurred — FortiWeb logs all proxied traffic
+1. Enable traffic log on FortiWeb
 
-> [!NOTE]
-> If the **Attack Log** is empty, check **Log > Log Access > Traffic Log** instead.
-> The exact log location depends on your FortiWeb firmware version. Seeing any log
-> entries confirms FortiWeb is actively processing the traffic.
+   ```bash
+   config log traffic-log
+     set status enable
+     set packet-log enable
+   end
+   ```
+
+2. Enable traffic log per server policy
+
+   ```bash
+   config server-policy policy
+     edit "policy-redwood-app"
+       set tlog enable
+     next
+   end
+   ```
+
+3. On `fweb-ha-vm1`, navigate to **Log&Report > Log Access > Traffic**
+4. You should see entries for the requests you just made. It not, try the `fweb-ha-vm2` FortiWeb logs all proxied traffic now
 
 #### 6.5 Test Attack Detection (Application Only — No WAF Yet)
 
@@ -433,36 +441,24 @@ attached yet — so at this point, attacks reach the application server unblocke
 
 1. In your browser, navigate to:
 
-http://<fweb-ha-loadbalance-IP>/?name=' OR 'x'='x
+   ```http
+   http://<fweb-ha-loadbalance-IP>/?name=' OR 'x'='x
+   ```
 
 2. The page should switch to the **attack state** — dark red background, flickering
    animation, and the attack details displayed
 
 > [!NOTE]
-> The application is detecting the payload in the URL and changing its appearance
-> client-side. The request **did reach the application server** — FortiWeb forwarded
-> it without blocking because no protection profile is attached to the policy yet.
+> The application is detecting the payload in the URL and changing its appearance. The request **did reach the application server** — FortiWeb forwarded it without blocking because no protection profile is attached to the policy yet.  
 > This is the **unprotected** baseline you will compare against in Lab 4.
 
 ### Validation
 
-- [ ] Application accessible at `http://<fweb-ha-loadbalance-IP>`
-- [ ] Demo application page rendered correctly (coloured background, server name visible)
-- [ ] Server name changes across multiple requests confirming load balancing
-- [ ] SQL injection payload reaches the application unblocked (expected at this stage)
-- [ ] FortiWeb logs show traffic entries for the test requests
-
----
-
-## Challenge! ⚔️
-
-You configured the Virtual Server to use `port1`'s interface IP. The Azure External Load
-Balancer forwards traffic to this IP on port 80. But the load balancer was deployed by
-the ARM template with **Floating IP (Direct Server Return) enabled** on its load
-balancing rules.
-
-What does Floating IP mean in this context, and why is it important for FortiWeb's
-Virtual Server configuration? What would happen if Floating IP were disabled?
+- [x] Application accessible at `http://<fweb-ha-loadbalance-IP>`
+- [x] Demo application page rendered correctly (coloured background, server name visible)
+- [x] Server name changes across multiple requests confirming load balancing
+- [x] SQL injection payload reaches the application unblocked (expected at this stage)
+- [x] FortiWeb logs show traffic entries for the test requests
 
 ---
 
@@ -471,27 +467,33 @@ Virtual Server configuration? What would happen if Floating IP were disabled?
 ### What You've Accomplished
 
 ✅ **Server Pool Created:**
+
 - `pool-redwood-app` with Round Robin load balancing
 - Both `app-server-1` and `app-server-2` as healthy pool members on port 80
 
 ✅ **Virtual Server Configured:**
+
 - `vs-redwood-app` bound to `port1` interface IP on both nodes
 - Listening for incoming HTTP traffic from the Azure External Load Balancer
 
 ✅ **Server Policy Active:**
+
 - `policy-redwood-app` connecting Virtual Server to Server Pool
 - HTTP service — no WAF protection profile (intentional at this stage)
 
 ✅ **Configuration Replicated:**
+
 - All objects confirmed present and active on `fweb-ha-vm2`
 
 ✅ **End-to-End Traffic Verified:**
+
 - Application accessible through the load balancer public IP
 - Round Robin load balancing confirmed across both application servers
 - FortiWeb confirmed in the traffic path via logs
 - Unprotected attack baseline established for Lab 4 comparison
 
 ### Architecture Review
+
 ```text
 redwood-app-protection-rg (Canada Central)
 │
@@ -516,43 +518,31 @@ redwood-app-protection-rg (Canada Central)
 
 ### Key Takeaways
 
-1. **FortiWeb operates as a reverse proxy:** Clients connect to FortiWeb — never
-   directly to the application servers. FortiWeb establishes its own connection to the
-   backend on the client's behalf, giving it complete visibility and control over the
-   traffic.
+1. **FortiWeb operates as a reverse proxy:** Clients connect to FortiWeb — never directly to the application servers. FortiWeb establishes its own connection to the backend on the client's behalf, giving it complete visibility and control over the traffic.
 
-2. **The three-object model is sequential:** Virtual Server defines where to listen →
-   Server Policy defines what to do → Server Pool defines where to send. Each object
-   has one responsibility. This separation makes configuration changes surgical and
-   predictable.
+2. **The three-object model is sequential:** Virtual Server defines where to listen → Server Policy defines what to do → Server Pool defines where to send. Each object has one responsibility. This separation makes configuration changes surgical and predictable.
 
-3. **No protection profile means no WAF inspection:** A Server Policy without a
-   protection profile is a transparent proxy — it forwards traffic without any security
-   analysis. This is useful for establishing a baseline, but not for production.
+3. **No protection profile means no WAF inspection:** A Server Policy without a protection profile is a transparent proxy — it forwards traffic without any security analysis. This is useful for establishing a baseline, but not for production.
 
-4. **Configuration replication must be verified after every change:** Each time you
-   modify FortiWeb on Node 1, confirm Node 2 has received the update before testing
-   traffic. Both nodes serve live traffic — inconsistent configuration produces
-   inconsistent results.
+4. **Configuration replication must be verified after every change:** Each time you modify FortiWeb on Node 1, confirm Node 2 has received the update before testing traffic. Both nodes serve live traffic — inconsistent configuration produces inconsistent results.
 
-5. **Health checks protect your users:** FortiWeb's Server Pool health checks
-   continuously verify that application servers are responding. If `app-server-1`
-   fails, FortiWeb automatically stops sending traffic to it — without any manual
-   intervention.
+5. **Health checks protect your users:** FortiWeb's Server Pool health checks continuously verify that application servers are responding. If `app-server-1` fails, FortiWeb automatically stops sending traffic to it — without any manual intervention.
 
 ### Validation Checklist
 
 Before proceeding to Lab 4, verify:
 
 **FortiWeb Configuration (both nodes):**
-- [ ] `pool-redwood-app` present with two healthy members on port 80
-- [ ] `vs-redwood-app` present and bound to `port1`
-- [ ] `policy-redwood-app` present, enabled, no protection profile
+
+- [x] `pool-redwood-app` present with two healthy members on port 80
+- [x] `vs-redwood-app` present and bound to `port1`
+- [x] `policy-redwood-app` present, enabled, no protection profile
 
 **Traffic:**
-- [ ] Application accessible at `http://<fweb-ha-loadbalance-IP>`
-- [ ] Load balancing confirmed across both application servers
-- [ ] Attack payloads reach the application unblocked (expected — no WAF yet)
+
+- [x] Application accessible at `http://<fweb-ha-loadbalance-IP>`
+- [x] Load balancing confirmed across both application servers
+- [x] Attack payloads reach the application unblocked (expected — no WAF yet)
 
 ### Next Steps
 
@@ -573,24 +563,19 @@ In Lab 4, you will:
 
 ### Issue: Application Not Loading at Load Balancer IP
 
-1. Verify the Server Policy `policy-redwood-app` is **Enabled** on both nodes
+1. Verify the Server Policy `policy-redwood-app` is properly configured on both nodes
 2. Verify the Virtual Server `vs-redwood-app` is **Enabled**
 3. Verify both pool members in `pool-redwood-app` show a healthy (green) status
-4. Navigate to **Log > Log Access** on `fweb-ha-vm1` — if requests are arriving at
-   FortiWeb but failing, you will see error entries here
-5. Check the Azure Load Balancer health probes — navigate to `fweb-ha-loadbalance >
-   Monitoring > Insights` to confirm both backend nodes are healthy
+4. Navigate to **Log&Report > Log Access > Traffic** on `fweb-ha-vm1` — if requests are arriving at FortiWeb but failing, you will see error entries here
+5. Check the Azure Load Balancer health probes — navigate to `fweb-ha-loadbalance > Monitoring > Insights` to confirm both backend nodes has a Health status: Warning with an Average Health Probe status of 50%.
 
 ### Issue: Pool Members Showing Unhealthy
 
-1. Verify nginx is running on both application servers:
+1. Verify nginx is running on both application servers: 
    - Connect via Bastion and run `systemctl status nginx`
-2. Verify the static route `10.0.0.0/16` via `port2` is present on `fweb-ha-vm1`
-   (navigate to **Network > Route**)
-3. Verify the private IPs in the pool match the actual IPs of the application servers
-   (check in the Azure Portal under each VM's **Overview**)
-4. Try a manual ping from the FortiWeb CLI console:
-   `execute ping <app-server-private-ip>`
+2. Verify the static route `10.0.0.0/16` via `port2` is present on `fweb-ha-vm1` (navigate to **Network > Route**)
+3. Verify the private IPs in the pool match the actual IPs of the application servers (check in the Azure Portal under each VM's **Overview**)
+4. Try a manual ping from the FortiWeb CLI console: `execute ping <app-server-private-ip>`
 
 ### Issue: Always Seeing the Same Application Server
 
@@ -601,16 +586,6 @@ connection go to the same server. To see both servers:
 - Use an incognito window for each test
 - Try accessing from a different device or browser
 - Close and reopen the browser between tests
-
-### Issue: Configuration Not Synced to `fweb-ha-vm2`
-
-1. On `fweb-ha-vm2`, navigate to **System > High Availability > Settings > Manager**
-2. Check the sync status and last sync timestamp
-3. On `fweb-ha-vm1`, verify the Manager role shows **Server** and the port is `996`
-4. Verify `fweb-ha-vm2` Manager role shows **Client** pointing to `fweb-ha-vm1`'s
-   `port2` IP address
-5. Check connectivity between nodes:
-   - From `fweb-ha-vm1` CLI: `execute ping <fweb-ha-vm2-port2-ip>`
 
 ### Issue: Attack Payload Is Being Blocked Already
 

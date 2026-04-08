@@ -140,7 +140,7 @@ FortiWeb uses three functional subnets in this architecture:
 
 ---
 
-## Part B: Create the Virtual Network and Subnets
+## Part B: Create the Virtual Network, Subnets and NAT Gateway
 
 ### Step 2: Create the Virtual Network
 
@@ -178,7 +178,7 @@ FortiWeb uses three functional subnets in this architecture:
    | --- | --- |
    | **Bastion name** | `bas-app-protection` |
    | **Public IP address** | Click **Create a public IP address** |
-   | **Public IP name** | `pip-bas-app-protection` |
+   | **Public IP name** | `bas-app-protection-pip` |
    | **SKU** | Standard (default) |
 
 3. Click **OK** to confirm the public IP
@@ -272,6 +272,86 @@ The `AzureBastionSubnet` should have been created automatically when you enabled
 - ✅ `external` subnet 10.0.1.0/24 present
 - ✅ `internal` subnet 10.0.2.0/24 present
 - ✅ `protected` subnet 10.0.3.0/24 present
+
+### Step 6: Create a NAT Gateway for the Protected Subnet
+
+Azure no longer provides default outbound internet access for VMs without a public IP.
+The application servers in the `protected` subnet have no public IPs — without an explicit outbound method, the custom data script will fail on first boot because the VM cannot reach the internet.
+
+A NAT Gateway associated with the `protected` subnet solves this by providing a dedicated, predictable public IP for all outbound traffic originating from that subnet.
+
+> [!NOTE]
+> The `external` subnet does **not** need a NAT Gateway — the FortiWeb VMs already have explicit public IPs assigned by the ARM template, which take precedence for outbound connectivity.
+
+#### 6.1 Create the NAT Gateway
+
+1. Navigate to `redwood-app-protection-rg`
+2. Click **+ Create**
+3. In the Marketplace search field, type `nat gateway`
+4. Click **NAT gateway** (Microsoft - Azure service)
+5. Click **Create > NAT gateway**
+
+#### 6.2 Configure Basics
+
+1. In the **Basics** tab, configure:
+
+   | Setting | Value |
+   | --- | --- |
+   | **Subscription** | Your Azure subscription |
+   | **Resource group** | `redwood-app-protection-rg` |
+   | **NAT gateway name** | `nat-app-protection` |
+   | **Region** | `Canada Central` |
+   | **SKU** | `Standard: Supports zonal deployment` |
+   | **Availbility zone** | `No Zone` |
+   | **TCP idle timeout (minutes)** | `4` (default) |
+
+2. Click **Next: Outbound IP**
+
+#### 6.3 Create a Public IP for the NAT Gateway
+
+1. In the **Outbound IP** tab, click **Add public IP address or prefixes**
+2. In **Manage public IP addresses and prefixes** tab, click on **Create a public IP address**:
+
+| Setting | Value |
+| --- | --- |
+| **Name** | `nat-app-protection-pip` |
+| **SKU** | `Standard` (default) |
+
+3. Click **OK**
+4. Click **Save**
+5. Click **Next**
+
+#### 6.4 Associate with the Protected Subnet
+
+1. In the **Networking** tab:
+   - **Virtual network:** `vnet-app-protection`
+2. In the subnets list, check the box next to `protected`
+
+> [!WARNING]
+> Associate the NAT Gateway with the `protected` subnet **only**. Do not associate it
+> with `external` or `internal` — the FortiWeb nodes have their own public IPs and do
+> not need NAT Gateway outbound access.
+
+3. Click **Review + create**
+4. Click **Create**
+
+> [!NOTE]
+> NAT Gateway deployment typically takes 1–2 minutes. Once deployed, all outbound
+> internet traffic from VMs in the `protected` subnet will use `nat-app-protection-pip`
+> as their source IP — regardless of whether those VMs have a public IP assigned.
+
+#### 6.5 Verify the Association
+
+1. After deployment, click **Go to resource**
+2. Click **Settings > Networking** in the left menu
+3. Verify `protected` is listed as an associated subnet
+
+### Validation
+
+- ✅ `nat-app-protection` created in Canada Central
+- ✅ `nat-app-protection-pip` public IP assigned to the NAT Gateway
+- ✅ NAT Gateway associated with the `protected` subnet only
+- ✅ `external` and `internal` subnets have no NAT Gateway association
 
 ---
 
@@ -461,7 +541,7 @@ subnet interface).
 | Resource | Purpose |
 |---|---|
 | `fweb-ha-nic-pip1` | Management access — FortiWeb Node 1 (`fweb-ha-vm1`) |
-| `fweb-ha-nicpip2` | Management access — FortiWeb Node 2 (`fweb-ha-vm2`) |
+| `fweb-ha-nic-pip2` | Management access — FortiWeb Node 2 (`fweb-ha-vm2`) |
 | `fweb-ha-lb-pip` | Application traffic — shared VIP for both nodes |
 
 > [!TIP]
@@ -474,12 +554,13 @@ subnet interface).
 #### 10.1 Open the FortiWeb Management Interface — Node 1
 
 1. Open a new browser tab and navigate to:
-```
-https://<fweb-ha-nicPublic-IP1>:8443
-```
 
-2. You will see a certificate warning — this is expected (self-signed certificate)
-3. Click **Advanced** → **Proceed** (or the equivalent in your browser)
+   ```console
+   https://<fweb-ha-nic-pip1>:8443
+   ```
+
+1. You will see a certificate warning — this is expected (self-signed certificate)
+2. Click **Advanced** → **Proceed** (or the equivalent in your browser)
 
 #### 10.2 Log In
 
@@ -621,7 +702,7 @@ redwood-app-protection-rg (Canada Central)
 │   └── protected           (10.0.3.0/24)  ← App servers [deployed in Lab 3]
 │
 ├── bas-app-protection                      ← Azure Bastion
-├── pip-bas-app-protection                  ← Bastion public IP
+├── bas-app-protection-pip                  ← Bastion public IP
 │
 ├── fweb-ha-loadbalance (External LB)       ← Ports 80/443 — fweb-ha-loadbalance-IP
 │   └── FwbHaLBBackendAddrPool

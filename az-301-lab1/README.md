@@ -413,9 +413,11 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 1. In the template editor, select all existing content and delete it
 2. Open the following URL in a new browser tab: [FortiWeb ARM Template](https://raw.githubusercontent.com/regisftm/AZ-301/refs/heads/main/arm-template/deploy_fwb_ha.json)
 3. Select all content (`Ctrl+A`) and copy it (`Ctrl+C`)
-4. Return to the Azure Portal template editor, delete the pre-populated **Template Content** and and paste (`Ctrl+V`)
+4. Return to the Azure Portal template editor, click on the **Template Content** and paste (`Ctrl+V`)
 5. Click **Review + create**
 6. Click **Create**
+
+![ARM Template](images/step7.3-arm-template.png)
 
 > [!NOTE]
 > The template spec is a reusable container for the ARM template. Creating it first means you can redeploy the same template in future without re-pasting the JSON.
@@ -424,14 +426,14 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 
 #### 8.1 Open the Template for Deployment
 
-1. After creation, go back to the `redwood-app-protection-rg` and  click the **fortiweb-ha-template** template spec.
+1. After creation, go back to the `redwood-app-protection-rg` and click the **fortiweb-ha-template** template spec. If you don't see it, refresh the view.
 2. Click **Deploy**
 
 #### 8.2 Configure Basics
 
 | Setting | Value |
-|---|---|
-| **Subscription** | Your Azure subscription |
+| --- | --- |
+| **Subscription** | `Your Azure subscription` |
 | **Resource group** | `redwood-app-protection-rg` |
 | **Region** | `Canada Central` |
 
@@ -440,7 +442,7 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 **Resource Naming:**
 
 | Parameter | Value |
-|---|---|
+| --- | --- |
 | **Resource Name Prefix** | `fweb-ha` |
 
 > [!NOTE]
@@ -449,7 +451,7 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 **VM Configuration:**
 
 | Parameter | Value |
-|---|---|
+| --- | --- |
 | **Vm Sku** | `Standard_F2s_v2` |
 | **Availability Options** | `Availability Set` |
 | **Accelerated Networking** | `false` |
@@ -460,14 +462,14 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 > [!WARNING]
 > The admin username cannot be `admin` or `root` — Azure will reject these. Use
 > `fortiuser` as shown above.
-
+---
 > [!WARNING]
 > The password must satisfy at least 3 of these 4 conditions: uppercase characters, lowercase characters, a digit, a special character. Save this password — you will need it to access both FortiWeb nodes throughout the workshop.
 
 **Network Configuration:**
 
 | Parameter | Value |
-|---|---|
+| --- | --- |
 | **Vnet New Or Existing** | `existing` |
 | **Vnet Resource Group** | `redwood-app-protection-rg` (or just leave the [resourceGroup().name] |
 | **Vnet Name** | `vnet-app-protection` |
@@ -480,18 +482,20 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 **Load Balancer:**
 
 | Parameter | Value |
-|---|---|
+| --- | --- |
 | **Load Balancer Type** | `Public` |
 
 **FortiFlex Licensing:**
 
 | Parameter | Value |
-|---|---|
+| --- | --- |
 | **Fortiweb License Forti Flex A** | Your FortiFlex Token A (from Step 6.1) |
 | **Fortiweb License Forti Flex B** | Your FortiFlex Token B (from Step 6.1) |
 
 > [!NOTE]
 > The tokens are injected into each VM's `customData` at deployment time. When each FortiWeb node boots for the first time, it reads the token and contacts Fortinet's licensing servers automatically — no manual activation in the GUI is required.
+
+![Deploy ARM template](images/step8.3-deploy.png)
 
 #### 8.4 Deploy
 
@@ -513,13 +517,13 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 
 When deployment completes, click on **Go to resource group**, verify the following resources exist in `redwood-app-protection-rg`:
 
-- ✅ `fweb-ha-vm1` — FortiWeb Node 1 (VM)
-- ✅ `fweb-ha-vm2` — FortiWeb Node 2 (VM)
-- ✅ `fweb-ha-availabilitySet` — Availability set containing both VMs
-- ✅ `fweb-ha-loadbalance` — External Load Balancer
-- ✅ `fweb-ha-loadbalance-IP` — Load Balancer public IP
-- ✅ `fweb-ha-nicPublic-IP1` and `fweb-ha-nicPublic-IP2` — VM management public IPs
-- ✅ `fweb-ha-securityGroup` — Network Security Group
+- [x] `fweb-ha-vm1` — FortiWeb Node 1 (VM)
+- [x] `fweb-ha-vm2` — FortiWeb Node 2 (VM)
+- [x] `fweb-ha-avset` — Availability set containing both VMs
+- [x] `fweb-ha-lb` — External Load Balancer
+- [x] `fweb-ha-lb-pip` — Load Balancer public IP
+- [x] `fweb-ha-nic-pip1` and `fweb-ha-nic-pip2` — VM management public IPs
+- [x] `fweb-ha-nsg` — Network Security Group
 
 ---
 
@@ -602,6 +606,8 @@ In this deployment, both FortiWeb nodes operate as **Standalone** units with no 
 
 6. Click **Apply**
 
+![HA Configuration - Server](images/step11.1-ha-config.png)
+
 > [!NOTE]
 > The Server role means `fweb-ha-vm1` is the **source of truth** for configuration. Any changes you make during this workshop should always be made on `fweb-ha-vm1`  first, then the FortiWeb `fweb-ha-vm2` will automatically pull it.
 
@@ -613,6 +619,8 @@ You will use the internal IP address of the FortiWeb `fweb-ha-vm1` to configure 
 2. Log in with your `fortiuser` credentials
 3. Navigate to **Network > Interface**
 4. Copy the port2 IP address to you notepad.
+
+![fweb-ha-vm1 ip address configuration](images/step11.2-ip-address.png)
 
 #### 11.3 Configure `fweb-ha-vm2` as the Configuration Client
 
@@ -631,6 +639,9 @@ You will use the internal IP address of the FortiWeb `fweb-ha-vm1` to configure 
 
 6. Click **Apply**
 
+![HA Configuration - Client](images/step11.3-ha-config-client.png)
+
+
 #### 11.4 Verify the Sync Completed Successfully
 
 1. On `fweb-ha-vm1`, navigate to **Dashboard > Status > System Information**
@@ -638,6 +649,9 @@ You will use the internal IP address of the FortiWeb `fweb-ha-vm1` to configure 
 3. In the top bar, where the HA status is showned, the following state should be observed:
    - On `fweb-ha-vm1` (Server): **HA: In Sync**
    - On `fweb-ha-vm2` (Client): **HA: Client**
+
+![HA Status Server](images/step11.4-server.png)
+![HA Status Client](images/step11.4-client.png)
 
 #### 11.5 Test the Configuration Synchornization
 
@@ -650,10 +664,10 @@ You will use the internal IP address of the FortiWeb `fweb-ha-vm1` to configure 
 
 ### Validation
 
-- [ ] `fweb-ha-vm1` configured as configuration **Server** on port 996
-- [ ] `fweb-ha-vm2` configured as configuration **Client** pointing to `fweb-ha-vm1`s private IP
-- [ ] Initial sync triggered and completed successfully
-- [ ] `fweb-ha-vm2` configuration matches `fweb-ha-vm1`
+- [x] `fweb-ha-vm1` configured as configuration **Server** on port 996
+- [x] `fweb-ha-vm2` configured as configuration **Client** pointing to `fweb-ha-vm1`s private IP
+- [x] Initial sync triggered and completed successfully
+- [x] `fweb-ha-vm2` configuration matches `fweb-ha-vm1`
 
 ---
 
@@ -668,48 +682,34 @@ The External Load Balancer distributes incoming traffic across both FortiWeb nod
 ### What You've Accomplished
 
 ✅ **Resource Group Created:**
+
 - `redwood-app-protection-rg` in Canada Central
 
 ✅ **Virtual Network Deployed:**
+
 - `vnet-app-protection` (10.0.0.0/16)
 - Four subnets: `AzureBastionSubnet`, `external`, `internal`, `protected`
 
 ✅ **Azure Bastion Configured:**
+
 - Browser-based secure access to private VMs — no public IPs required on app servers
 
 ✅ **FortiWeb HA Cluster Deployed via ARM Template:**
+
 - `fweb-ha-vm1` and `fweb-ha-vm2` running as standalone nodes
 - Azure External Load Balancer (`fweb-ha-loadbalance`) distributing traffic
 - FortiFlex tokens activated automatically on first boot
 - Both nodes in Availability Set for SLA coverage
 
 ✅ **Configuration Replication Established:**
+
 - Node 1 (`fweb-ha-vm1`) designated as configuration Server
 - Node 2 (`fweb-ha-vm2`) designated as configuration Client
 - Initial sync completed — both nodes are identical
 
 ### Architecture Review
-```text
-redwood-app-protection-rg (Canada Central)
-│
-├── vnet-app-protection (10.0.0.0/16)
-│   ├── AzureBastionSubnet  (10.0.0.0/24)
-│   ├── external            (10.0.1.0/24)  ← FortiWeb port1 (management + traffic)
-│   ├── internal            (10.0.2.0/24)  ← FortiWeb port2 (to app servers)
-│   └── protected           (10.0.3.0/24)  ← App servers [deployed in Lab 3]
-│
-├── bas-app-protection                      ← Azure Bastion
-├── bas-app-protection-pip                  ← Bastion public IP
-│
-├── fweb-ha-loadbalance (External LB)       ← Ports 80/443 — fweb-ha-loadbalance-IP
-│   └── FwbHaLBBackendAddrPool
-│       ├── fweb-ha-vm1 (Node 1 — Server)  ← fweb-ha-nicPublic-IP1
-│       └── fweb-ha-vm2 (Node 2 — Client)  ← fweb-ha-nicPublic-IP2
-│
-├── fweb-ha-availabilitySet
-├── fweb-ha-securityGroup
-└── [App servers — deployed in Lab 3]
-```
+
+![Lab 1 - Reference Architecture](images/az-301-lab1-reference-arch.png)
 
 ### Key Takeaways
 
@@ -728,17 +728,19 @@ redwood-app-protection-rg (Canada Central)
 Before proceeding to Lab 2, verify:
 
 **Infrastructure:**
-- ✅ `redwood-app-protection-rg` exists in Canada Central
-- ✅ `vnet-app-protection` has all four subnets with correct CIDRs
-- ✅ Azure Bastion deployed (`bas-app-protection`)
+
+- [x] `redwood-app-protection-rg` exists in Canada Central
+- [x] `vnet-app-protection` has all four subnets with correct CIDRs
+- [x] Azure Bastion deployed (`bas-app-protection`)
 
 **FortiWeb Cluster:**
-- ✅ `fweb-ha-vm1` and `fweb-ha-vm2` both running
-- ✅ GUI accessible on both nodes at port 8443
-- ✅ FortiFlex licences valid on both nodes
-- ✅ Node 1 configured as configuration Server (port 996)
-- ✅ Node 2 configured as configuration Client pointing to Node 1
-- ✅ Initial configuration sync completed successfully
+
+- [x] `fweb-ha-vm1` and `fweb-ha-vm2` both running
+- [x] GUI accessible on both nodes at port 8443
+- [x] FortiFlex licences valid on both nodes
+- [x] Node 1 configured as configuration Server (port 996)
+- [x] Node 2 configured as configuration Client pointing to Node 1
+- [x] Initial configuration sync completed successfully
 
 > [!NOTE]
 > The loadbalnacer will show both FortWeb backends as `Down` as we don't have the application server in place yet. The application server deployment will be done in Lab 2.

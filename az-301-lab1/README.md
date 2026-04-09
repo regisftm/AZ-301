@@ -320,7 +320,6 @@ A NAT Gateway associated with the `protected` subnet solves this by providing a 
    - **Virtual network:** `vnet-app-protection`
 2. In the subnets list, check the box next to `protected`
 
-   > [!WARNING]
    > Associate the NAT Gateway with the `protected` subnet **only**. Do not associate it with `external` or `internal` — the FortiWeb nodes have their own public IPs and do not need NAT Gateway outbound access.
 
 3. Click **Review + create**

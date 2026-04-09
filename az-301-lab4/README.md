@@ -610,4 +610,4 @@ All resources created during this workshop — VMs, load balancer, VNet, Bastion
 
 *Lab Guide Version 1.0 — April 2026*
 
-*AZ-301 Workshop Complete*
+*AZ-301 Workshop Complete!*

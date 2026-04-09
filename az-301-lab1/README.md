@@ -105,19 +105,21 @@ FortiWeb uses three functional subnets in this architecture:
 
    | Setting | Value |
    | --- | --- |
-   | **Subscription** | Your Azure subscription |
+   | **Subscription** | `Your Azure subscription` |
    | **Resource group** | `redwood-app-protection-rg` |
    | **Region** | `Canada Central` |
 
 3. Click **Review + create**
 4. Click **Create**
 
+![Create a Resource Group](images/step1.2-create-rg-screenshot.png)
+
 > [!NOTE]
 > All AZ-301 resources are deployed into `redwood-app-protection-rg` and the `Canada Central` region. Keeping all resources in one region and one resource group simplifies cleanup at the end of the workshop.
 
 ### Validation
 
-- ✅ Resource group `redwood-app-protection-rg` created in Canada Central
+- [x] Resource group `redwood-app-protection-rg` created in Canada Central
 
 ---
 
@@ -131,7 +133,7 @@ FortiWeb uses three functional subnets in this architecture:
 2. Click **+ Create**
 3. In the Marketplace search field, type `virtual network`
 4. Click **Virtual Network** (Microsoft service)
-5. Click **Create**
+5. Click **Create > Virtual network**
 
 #### 2.2 Configure Basic Settings
 
@@ -139,7 +141,7 @@ FortiWeb uses three functional subnets in this architecture:
 
    | Setting | Value |
    | --- | --- |
-   | **Subscription** | Your Azure subscription |
+   | **Subscription** | `Your Azure subscription` |
    | **Resource group** | `redwood-app-protection-rg` |
    | **Name** | `vnet-app-protection` |
    | **Region** | `Canada Central` |
@@ -157,12 +159,15 @@ FortiWeb uses three functional subnets in this architecture:
 
    | Setting | Value |
    | --- | --- |
-   | **Bastion name** | `bas-app-protection` |
-   | **Public IP address** | Click **Create a public IP address** |
+   | **Azure Bastion host name** | `bas-app-protection` |
+   | **Azure Bastion public IP address** | Click **Create a public IP address** |
    | **Public IP name** | `bas-app-protection-pip` |
    | **SKU** | Standard (default) |
 
 3. Click **OK** to confirm the public IP
+
+   ![Azure Bastion](images/step3.1-azure-bastion.png)
+
 4. Click **Next**
 
 > [!NOTE]
@@ -243,21 +248,22 @@ The `AzureBastionSubnet` should have been created automatically when you enabled
 
 3. Click **Create**
 
+![Verify and Create](images/step5.1-verify.png)
+
 > [!NOTE]
 > Wait for the VNet deployment to complete (1–2 minutes) before proceeding. The Bastion resource itself continues deploying in the background — you do not need to wait for it before starting Part C.
 
 ### Validation
 
-- ✅ VNet `vnet-app-protection` created in Canada Central
-- ✅ `AzureBastionSubnet` 10.0.0.0/24 present
-- ✅ `external` subnet 10.0.1.0/24 present
-- ✅ `internal` subnet 10.0.2.0/24 present
-- ✅ `protected` subnet 10.0.3.0/24 present
+- [x] VNet `vnet-app-protection` created in Canada Central
+- [x] `AzureBastionSubnet` 10.0.0.0/24 present
+- [x] `external` subnet 10.0.1.0/24 present
+- [x] `internal` subnet 10.0.2.0/24 present
+- [x] `protected` subnet 10.0.3.0/24 present
 
 ### Step 6: Create a NAT Gateway for the Protected Subnet
 
-Azure no longer provides default outbound internet access for VMs without a public IP.
-The application servers in the `protected` subnet have no public IPs — without an explicit outbound method, the custom data script will fail on first boot because the VM cannot reach the internet.
+Azure no longer provides default outbound internet access for VMs without a public IP. The application servers in the `protected` subnet will not have public IPs — without an explicit outbound method, the custom data script will fail on first boot because the VM cannot reach the internet, therefore the application server will not work.
 
 A NAT Gateway associated with the `protected` subnet solves this by providing a dedicated, predictable public IP for all outbound traffic originating from that subnet.
 
@@ -272,13 +278,15 @@ A NAT Gateway associated with the `protected` subnet solves this by providing a 
 4. Click **NAT gateway** (Microsoft - Azure service)
 5. Click **Create > NAT gateway**
 
+![Create a NAT Gateway](images/step6.1-nat-gw.png)
+
 #### 6.2 Configure Basics
 
 1. In the **Basics** tab, configure:
 
    | Setting | Value |
    | --- | --- |
-   | **Subscription** | Your Azure subscription |
+   | **Subscription** | `Your Azure subscription` |
    | **Resource group** | `redwood-app-protection-rg` |
    | **NAT gateway name** | `nat-app-protection` |
    | **Region** | `Canada Central` |
@@ -286,7 +294,9 @@ A NAT Gateway associated with the `protected` subnet solves this by providing a 
    | **Availbility zone** | `No Zone` |
    | **TCP idle timeout (minutes)** | `4` (default) |
 
-2. Click **Next: Outbound IP**
+2. Click **Next**
+
+![Create NAT Gateway - Basics](images/step6.2-create-nat-gw-basics.png)
 
 #### 6.3 Create a Public IP for the NAT Gateway
 
@@ -302,24 +312,25 @@ A NAT Gateway associated with the `protected` subnet solves this by providing a 
 4. Click **Save**
 5. Click **Next**
 
+![Create NAT Gateway - Outbound IP](images/step6.3-create-pip.png)
+
 #### 6.4 Associate with the Protected Subnet
 
 1. In the **Networking** tab:
    - **Virtual network:** `vnet-app-protection`
 2. In the subnets list, check the box next to `protected`
 
-> [!WARNING]
-> Associate the NAT Gateway with the `protected` subnet **only**. Do not associate it
-> with `external` or `internal` — the FortiWeb nodes have their own public IPs and do
-> not need NAT Gateway outbound access.
+   > [!WARNING]
+   > Associate the NAT Gateway with the `protected` subnet **only**. Do not associate it with `external` or `internal` — the FortiWeb nodes have their own public IPs and do not need NAT Gateway outbound access.
 
 3. Click **Review + create**
+
+   ![Create NAT Gateway - Networking](images/step6.4-subnet-association.png)
+
 4. Click **Create**
 
 > [!NOTE]
-> NAT Gateway deployment typically takes 1–2 minutes. Once deployed, all outbound
-> internet traffic from VMs in the `protected` subnet will use `nat-app-protection-pip`
-> as their source IP — regardless of whether those VMs have a public IP assigned.
+> NAT Gateway deployment typically takes 1–2 minutes. Once deployed, all outbound internet traffic from VMs deployed in the `protected` subnet will use `nat-app-protection-pip` as their source IP — regardless of whether those VMs have a public IP assigned.
 
 #### 6.5 Verify the Association
 
@@ -327,12 +338,14 @@ A NAT Gateway associated with the `protected` subnet solves this by providing a 
 2. Click **Settings > Networking** in the left menu
 3. Verify `protected` is listed as an associated subnet
 
+![Verify subnet association in NAT GW](images/step6.5-verification.png)
+
 ### Validation
 
-- ✅ `nat-app-protection` created in Canada Central
-- ✅ `nat-app-protection-pip` public IP assigned to the NAT Gateway
-- ✅ NAT Gateway associated with the `protected` subnet only
-- ✅ `external` and `internal` subnets have no NAT Gateway association
+- [x] `nat-app-protection` created in Canada Central
+- [x] `nat-app-protection-pip` public IP assigned to the NAT Gateway
+- [x] NAT Gateway associated with the `protected` subnet only
+- [x] `external` and `internal` subnets have no NAT Gateway association
 
 ---
 
@@ -355,14 +368,14 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 
 > [!TIP]
 > Open a text editor (Notepad, VS Code) and paste both tokens now. You will enter them in Step 8 — they are long strings and easy to mistype.  
-
+---
 > [!NOTE]
 > **How FortiFlex activation works in this template:** The tokens are injected into each VM's `customData` at deployment time. When FortiWeb boots for the first time, it reads the token from `customData` and contacts Fortinet's licensing servers automatically. No manual activation step is required in the GUI.
 
 ### Validation
 
-- ✅ FortiFlex Token A copied and saved
-- ✅ FortiFlex Token B copied and saved
+- [x] FortiFlex Token A copied and saved
+- [x] FortiFlex Token B copied and saved
 
 ---
 
@@ -378,19 +391,23 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 4. In the **Template specs** in the results
 5. Click **+ Create > Template Specs**
 
+![Create template specs](images/step7.1-create-template.png)
+
 #### 7.2 Configure the Template Spec
 
 1. In the **Basics** tab, configure:
 
-| Setting | Value |
-|---|---|
-| **Subscription** | Your Azure subscription |
-| **Resource group** | `redwood-app-protection-rg` |
-| **Name** | `fortiweb-ha-template` |
-| **Location** | `Canada Central` |
-| **Version** | `v1.0.0` |
+   | Setting | Value |
+   | --- | --- |
+   | **Subscription** | Your Azure subscription |
+   | **Resource group** | `redwood-app-protection-rg` |
+   | **Name** | `fortiweb-ha-template` |
+   | **Location** | `Canada Central` |
+   | **Version** | `v1.0.0` |
 
 2. Click **Next: Edit Template**
+
+![Create Template Spec - Basics](step7.2-configure-template.png)
 
 #### 7.3 Paste the ARM Template Content
 

@@ -148,7 +148,7 @@
             }
         },
         "loadBalancerType": {
-            "defaultValue": "Internal",
+            "defaultValue": "Public",
             "type": "string",
             "allowedValues": [
                 "Internal",

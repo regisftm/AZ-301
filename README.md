@@ -65,30 +65,7 @@ The estimated time to complete this workshop is **3 hours**.
 
 After completing this workshop, you will have deployed the following architecture:
 
-```text
-redwood-app-protection-rg (Canada Central)
-│
-├── vnet-app-protection (10.0.0.0/16)
-│   ├── AzureBastionSubnet  (10.0.0.0/26)  ← Azure Bastion
-│   ├── external            (10.0.1.0/24)  ← FortiWeb port1 (internet-facing)
-│   ├── internal            (10.0.2.0/24)  ← FortiWeb port2 (server-facing)
-│   └── protected           (10.0.3.0/24)  ← Application servers (no public IP)
-│
-├── bas-app-protection                      ← Azure Bastion
-├── nat-app-protection                      ← NAT Gateway (protected subnet)
-│
-├── fweb-ha-loadbalance (External LB)       ← Public IP — ports 80/443
-│   └── FwbHaLBBackendAddrPool
-│       ├── fweb-ha-vm1 (Config Server)    ← port1: external, port2: internal
-│       └── fweb-ha-vm2 (Config Client)    ← port1: external, port2: internal
-│
-├── fweb-ha-availabilitySet
-├── fweb-ha-securityGroup
-│
-└── protected subnet
-    ├── app-server-1  ← nginx on port 80, no public IP
-    └── app-server-2  ← nginx on port 80, no public IP
-```
+![Reference Architecture](images/az-301-reference-architecture.png)
 
 #### Key Components
 

@@ -3,8 +3,8 @@
 ## Lab Overview
 
 **Duration:** 30 minutes  
-**Prerequisites:** Completed Lab 1 — `redwood-app-protection-rg`, `vnet-app-protection`,
-and both FortiWeb nodes must be running before starting this lab
+**Difficulty:** Beginner  
+**Prerequisites:** Completed Lab 1 — `redwood-app-protection-rg`, `vnet-app-protection`, and both FortiWeb nodes must be running before starting this lab
 
 ### Objective
 
@@ -22,32 +22,7 @@ By the end of this lab, you will have:
 
 ### Architecture
 
-After Lab 2:
-
-```text
-Internet
-    │
-    ▼
-External Load Balancer (fweb-ha-loadbalance-IP)
-    │
-    ├──────────────────────────┐
-    ▼                          ▼
-fweb-ha-vm1 (Server)      fweb-ha-vm2 (Client)
-   port1: 10.0.1.x           port1: 10.0.1.x
-   port2: 10.0.2.x           port2: 10.0.2.x
-    │                          │
-    └──────────┬───────────────┘
-               ▼
-         internal (10.0.2.0/24)
-               │
-               ▼
-         protected (10.0.3.0/24)
-         ├── app-server-1 (10.0.3.x) ← No public IP
-         └── app-server-2 (10.0.3.x) ← No public IP
-               ▲
-               │
-         Azure Bastion (management access only)
-```
+![Lab 2 - Reference Architecture](images/lab2-reference-architecture.png)
 
 ### Business Context
 

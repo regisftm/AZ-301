@@ -25,26 +25,7 @@ By the end of this lab, you will have:
 
 After Lab 1:
 
-```text
-Internet
-    │
-    ▼
-External Load Balancer (Public IP)
-    │
-    ├──────────────────────────┐
-    ▼                          ▼
-FortiWeb Node 1 (fwb-vm0)   FortiWeb Node 2 (fwb-vm1)
-   port1: 10.0.1.x             port1: 10.0.1.x
-   port2: 10.0.2.x             port2: 10.0.2.x
-    │                          │
-    └──────────┬───────────────┘
-               ▼
-         Internal Subnet (10.0.2.0/24)
-               │
-               ▼
-         Protected Subnet (10.0.3.0/24)
-         [App Servers — deployed in Lab 3]
-```
+![Lab 1 - Reference Architecture](images/az-301-lab1-reference-arch.png)
 
 ### Business Context
 
@@ -312,10 +293,10 @@ A NAT Gateway associated with the `protected` subnet solves this by providing a 
 1. In the **Outbound IP** tab, click **Add public IP address or prefixes**
 2. In **Manage public IP addresses and prefixes** tab, click on **Create a public IP address**:
 
-| Setting | Value |
-| --- | --- |
-| **Name** | `nat-app-protection-pip` |
-| **SKU** | `Standard` (default) |
+   | Setting | Value |
+   | --- | --- |
+   | **Name** | `nat-app-protection-pip` |
+   | **SKU** | `Standard` (default) |
 
 3. Click **OK**
 4. Click **Save**

@@ -416,11 +416,15 @@ FortiView provides a graphical summary of traffic and threat activity. It is par
 1. Click on **FortiView Threat Map**
 2. Observe the geographic source of detected attacks — your test attacks will appear from your current location
 
+![FortiView Threat Map](images/step10.2-threat-map.gif)
+
 #### 10.3 Review the Threats View
 
 1. Click on **Threats**
 2. You should see the four attack categories from Part C ranked by Threat Level
 3. Note the breakdown by Threat, Threat Level, Threat Score, Action and Service
+
+![FortiView Threats](images/step10.3-threats-view.png)
 
 > [!TIP]
 > In a real customer demonstration, FortiView is where you start. The visual threat map and top threats summary immediately communicate the volume and variety of attacks being blocked — making the value of FortiWeb tangible to non-technical stakeholders.
@@ -469,36 +473,7 @@ FortiView provides a graphical summary of traffic and threat activity. It is par
 
 ### Architecture Review
 
-```text
-redwood-app-protection-rg (Canada Central)
-│
-├── vnet-app-protection (10.0.0.0/16)
-│   ├── AzureBastionSubnet  (10.0.0.0/26)
-│   ├── external            (10.0.1.0/24)
-│   │   ├── fweb-ha-vm1 port1
-│   │   └── fweb-ha-vm2 port1
-│   ├── internal            (10.0.2.0/24)
-│   │   ├── fweb-ha-vm1 port2
-│   │   └── fweb-ha-vm2 port2
-│   └── protected           (10.0.3.0/24)
-│       ├── app-server-1 ✅ WAF-protected
-│       └── app-server-2 ✅ WAF-protected
-│
-├── fweb-ha-loadbalance (External LB)
-│   │
-│   ├── fweb-ha-vm1
-│   │   └── policy-redwood-app
-│   │       ├── WAF: Inline Standard Protection ✅
-│   │       ├── vs-redwood-app  (port1 IP)
-│   │       └── pool-redwood-app
-│   │           ├── app-server-1:80
-│   │           └── app-server-2:80
-│   │
-│   └── fweb-ha-vm2 (identical — replicated)
-│
-Attack traffic ❌ → Blocked at FortiWeb → Logged in attack log
-Clean traffic  ✅ → Forwarded to app servers → Logged in traffic log
-```
+![Final Architecture](images/final-architecture.png)
 
 ### Key Takeaways
 

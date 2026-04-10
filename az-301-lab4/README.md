@@ -3,6 +3,7 @@
 ## Lab Overview
 
 **Duration:** 35 minutes  
+**Difficulty:** Intermediate  
 **Prerequisites:** Completed Labs 1, 2, and 3 — application accessible at the load balancer public IP, SQL injection payload confirmed to reach the application unblocked
 
 ### Objective
@@ -26,30 +27,7 @@ By the end of this lab, you will have:
 
 After Lab 4:
 
-```text
-Internet
-    │
-    ▼
-External Load Balancer (fweb-ha-loadbalance-IP)
-    │
-    ├──────────────────────────┐
-    ▼                          ▼
-fweb-ha-vm1                fweb-ha-vm2
-    │                          │
-    ▼                          ▼
-policy-redwood-app         policy-redwood-app
-    │  ← Inline Standard        │  ← Inline Standard
-    │     Protection            │     Protection
-    │                          │
-    ▼                          ▼
-pool-redwood-app ──────────────┘
-    │
-    ├── app-server-1 ✅ Protected
-    └── app-server-2 ✅ Protected
-
-Attack traffic → BLOCKED at FortiWeb ❌
-Clean traffic  → FORWARDED to app servers ✅
-```
+![Solution Architecture](images/fortiweb_ha_architecture.svg)
 
 ### Business Context
 
@@ -131,6 +109,8 @@ sections:
 5. Click on **Return**
 6. Click on **Return**
 
+![Signature Profile](images/step1.2-protection-profile.png)
+
 > [!NOTE]
 > You are viewing a **read-only** built-in profile — you cannot modify it directly. In a production environment, you would clone this profile and customise it for your application's specific requirements. For this workshop, the built-in profile provides all the protection needed to demonstrate WAF capabilities.
 
@@ -138,14 +118,16 @@ sections:
 
 1. Navigate to **Web Protection > Known Attacks > Signature** to view the full signature database.
 2. Double-click the **Standard Protection** signature in the **Predefined** list of signatures.
+
+   ![Signatures - Standard Protection](images/step1.3-signatures.png)
+
 3. These are the signatures enabled in the profile. To explore more, click on **Signature Details**
 4. Explore the number of signatures available across all categories in the **Dictionaires**.
 
+   ![Signatures - Dictionaries](images/step1.3-dictionaries.png)
+
 > [!TIP]
-> FortiWeb's signature database is updated regularly via FortiGuard. The signatures
-> your deployment uses reflect the database version at the time of your FortiFlex
-> licence activation. Navigate to **System > FortiGuard** to verify your signature
-> database is current.
+> FortiWeb's signature database is updated regularly via FortiGuard. The signatures your deployment uses reflect the database version at the time of your FortiFlex licence activation. Navigate to **System > Config > FortiGuard** to verify your signature database is current.
 
 ### Validation
 
@@ -172,13 +154,15 @@ sections:
 
    | Setting | Value |
    | --- | --- |
-   | **Name** | `policy-redwood-app` |
-   | **Virtual Server** | `vs-redwood-app` |
-   | **Server Pool** | `pool-redwood-app` |
-   | **HTTP Service** | `HTTP` |
-   | **Web Protection Profile** | `Inline Standard Protection` ✅ |
+   | **Name** | `policy-redwood-app` (unchanged) |
+   | **Virtual Server** | `vs-redwood-app` (unchanged) |
+   | **Server Pool** | `pool-redwood-app` (unchanged) |
+   | **HTTP Service** | `HTTP` (unchanged) |
+   | **Web Protection Profile** | `Inline Standard Protection` (✅ NEW!) |
 
 4. Click **OK**
+
+![Attach Protection Profile](images/step2.2-attach-protection-profile.png)
 
 > [!NOTE]
 > The protection profile takes effect **immediately** after saving — no restart or commit required. Requests arriving at FortiWeb from this point forward are inspected against the Inline Standard Protection signature set.
@@ -188,6 +172,8 @@ sections:
 1. Navigate back to **Policy > Server Policy**
 2. Confirm `policy-redwood-app` still shows **Status: Running** (green link symbol)
 3. Confirm the **Profile** column now shows `Inline Standard Protection`
+
+![Policy Status Verification](images/step2.3-verify-policy-status.png)
 
 ### Step 3: Sync Configuration to `fweb-ha-vm2`
 
@@ -223,8 +209,10 @@ The key difference: FortiWeb now inspects every request before forwarding it.
    http://<fweb-ha-loadbalance-IP>/?name=' OR 'x'='x
    ```
 
-1. In Lab 3, the page turned dark red and showed the attack details.
+2. In Lab 3, the page turned dark red and showed the attack details.
    **What do you see now?**
+
+   ![SQL Injection blocked](images/step4.1-sql-injection.png)
 
 #### 4.2 Expected Result
 
@@ -235,10 +223,7 @@ Web Page Blocked!
 The page cannot be displayed. Please contact the administrator for additional information.
 
 > [!NOTE]
-> The exact appearance of the block page depends on your FortiWeb firmware version and
-> whether a custom block page has been configured. The key indicator is that the
-> **application's dark red attack state page is not shown** — the request never reached
-> the application server.
+> The exact appearance of the block page depends on your FortiWeb firmware version and whether a custom block page has been configured. The key indicator is that the **application's dark red attack state page is not shown** — the request never reached the application server.
 
 #### 4.3 Verify the Attack was Logged
 
@@ -253,9 +238,11 @@ The page cannot be displayed. Please contact the administrator for additional in
    | **URL** | `/?name=' OR 'x'='x` |
    | **Policy** | `policy-redwood-app` |
 
+   ![Attack Log](images/step4.3-attack-log.png)
+
 > [!TIP]
 > Double-click on the log entry to expand the full details. The **Signature ID** and **Signature Subclass Type** fields identify exactly which rule triggered. This information is valuable when tuning protection profiles to reduce false positives.
-
+---
 >[!TIP]
 >If you can't find the log on `fweb-ha-vm1`, try the `fweb-ha-vm2`. This is where FortiAnalyzer becomes handy 😜
 
@@ -320,6 +307,8 @@ FortiWeb blocks the request before it reaches the application server.
 1. Navigate to **Log&Report > Log Access > Attack**
 2. Confirm all four attack types now appear in the log
 
+![Verify Attack Log](images/step7.3-verify-attack-log.png)
+
 ### Step 8: Confirm Clean Traffic Still Works
 
 Blocking attacks is only half the job — confirming that legitimate traffic is
@@ -335,12 +324,15 @@ unaffected is equally important.
 
 2. The application should load normally — coloured gradient background, server name, **Service Online** badge
 
+![Traffic Log](images/step8.1-regular-traffic.png)
+
 #### 8.2 Verify Clean Traffic in Logs
 
 1. Navigate to **Log&Report > Log Access > Traffic**
 2. Confirm traffic log entries exist for the clean requests
-3. Note that clean traffic shows **Action: Accept** — FortiWeb forwarded these
-   requests without intervention
+3. Note that clean traffic shows **Status: success** — FortiWeb forwarded these requests without intervention
+
+
 
 ### Validation
 
@@ -379,6 +371,8 @@ unaffected is equally important.
    | **Threat Level** | `Critical` for SQL injection |
    | **Action** | `Alert & Deny` — request was blocked |
    | **Policy** | `policy-redwood-app` |
+
+   ![Attack Detail](images/step9.2-attack-details.png)
 
 > [!NOTE]
 > The **Signature ID** is particularly useful when working with Fortinet support or when a rule produces false positives. You can use the ID to look up the exact rule in FortiGuard's signature database and create an exception if needed.

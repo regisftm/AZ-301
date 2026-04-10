@@ -406,7 +406,7 @@ Locate the FortiFlex Tokens in your welcome e-mail:
 
 2. Click **Next: Edit Template**
 
-![Create Template Spec - Basics](step7.2-configure-template.png)
+![Create Template Spec - Basics](images/step7.2-configure-template.png)
 
 #### 7.3 Paste the ARM Template Content
 

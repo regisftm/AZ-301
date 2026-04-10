@@ -3,17 +3,13 @@
 ## Lab Overview
 
 **Duration:** 40 minutes  
+**Difficulty:** Intermediate  
 **Prerequisites:** Completed Labs 1 and 2 — both FortiWeb nodes running, both
 application servers running with nginx responding on port 80
 
 ### Objective
 
-Configure FortiWeb to receive, inspect, and forward web traffic to the Redwood
-Industries application servers. You will create a Server Pool defining the backend
-targets, a Virtual Server defining how FortiWeb receives incoming traffic, and a Server
-Policy connecting them. By the end of this lab, traffic will flow end-to-end from the
-internet through the Azure External Load Balancer, through FortiWeb, and to the
-application servers.
+Configure FortiWeb to receive, inspect, and forward web traffic to the Redwood Industries application servers. You will create a Server Pool defining the backend targets, a Virtual Server defining how FortiWeb receives incoming traffic, and a Server Policy connecting them. By the end of this lab, traffic will flow end-to-end from the internet through the Azure External Load Balancer, through FortiWeb, and to the application servers.
 
 ### What You'll Build
 
@@ -30,43 +26,19 @@ By the end of this lab, you will have:
 
 After Lab 3:
 
-```text
-Internet
-    │
-    ▼
-External Load Balancer (fweb-ha-loadbalance-IP)
-ports 80/443
-    │
-    ├──────────────────────────┐
-    ▼                          ▼
-fweb-ha-vm1                fweb-ha-vm2
-port1: 10.0.1.x            port1: 10.0.1.x  ← Virtual Server (port1 IP)
-port2: 10.0.2.x            port2: 10.0.2.x
-    │                          │
-    └──────────┬───────────────┘
-               ▼
-     Server Pool (HTTP, port 80)
-     ┌─────────────────────────┐
-     │  app-server-1 10.0.3.x  │
-     │  app-server-2 10.0.3.x  │
-     └─────────────────────────┘
-```
+![Lab 3 - Reference Architecture](images/lab3-reference-architecture.png)
 
 ### Business Context
 
 **Redwood Industries' Requirement:**
 
-With the infrastructure and application servers in place, the security team needs
-FortiWeb actively intercepting and inspecting all traffic before it reaches the
-application. At this stage there is no WAF policy applied yet — the goal is to establish
-a working traffic path through FortiWeb first, confirm the application is reachable, and
-validate load distribution across both servers. WAF protection policies will be applied
-in Lab 4.
+With the infrastructure and application servers in place, the security team needs FortiWeb actively intercepting and inspecting all traffic before it reaches the
+application. At this stage there is no WAF policy applied yet — the goal is to establish a working traffic path through FortiWeb first, confirm the application is reachable, and
+validate load distribution across both servers. WAF protection policies will be applied in Lab 4.
 
 **The FortiWeb Traffic Model:**
 
-FortiWeb operates as a **reverse proxy**. Clients connect to the Virtual Server IP —
-which is FortiWeb's own interface address — and FortiWeb establishes a separate
+FortiWeb operates as a **reverse proxy**. Clients connect to the Virtual Server IP — which is FortiWeb's own interface address — and FortiWeb establishes a separate
 connection to the backend server on the client's behalf. This means:
 
 - Clients never communicate directly with the application servers
@@ -81,57 +53,26 @@ connection to the backend server on the client's behalf. This means:
 
 FortiWeb uses three objects to define how traffic flows through the appliance:
 
-```text
-Incoming traffic
-      │
-      ▼
-┌─────────────────┐
-│  Virtual Server  │  ← "Where do I listen for traffic?"
-│  (port1 IP:80)  │     Defines the IP and port FortiWeb accepts traffic on
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Server Policy   │  ← "What do I do with this traffic?"
-│                  │     Connects Virtual Server to Server Pool,
-│                  │     applies protection profiles (Lab 4)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Server Pool   │  ← "Where do I send the traffic?"
-│  app-server-1   │     Defines backend servers, port, and
-│  app-server-2   │     health check / load balancing behaviour
-└─────────────────┘
-```
+![Traffic Flow](images/fortiweb_traffic_flow.svg)
 
 ### Server Pool
 
-The Server Pool defines the group of backend servers that FortiWeb forwards traffic to.
-Each server in the pool is a **Pool Member** with its own IP address, port, and weight.
-FortiWeb performs health checks against pool members and removes unhealthy members from
-rotation automatically.
+The Server Pool defines the group of backend servers that FortiWeb forwards traffic to. Each server in the pool is a **Pool Member** with its own IP address, port, and weight.  
+FortiWeb performs health checks against pool members and removes unhealthy members from rotation automatically.
 
 ### Virtual Server
 
-The Virtual Server defines the IP address and port on which FortiWeb listens for
-incoming client connections. In this workshop, the Virtual Server uses FortiWeb's
-`port1` interface IP — the same IP that the Azure External Load Balancer sends traffic
-to. Clients connect to the load balancer's public IP, which forwards to FortiWeb's
-`port1` IP, which the Virtual Server intercepts.
+The Virtual Server defines the IP address and port on which FortiWeb listens for incoming client connections. In this workshop, the Virtual Server uses FortiWeb's `port1` interface IP — the same IP that the Azure External Load Balancer sends traffic to. Clients connect to the load balancer's public IP, which forwards to FortiWeb's `port1` IP, which the Virtual Server intercepts.
 
 ### Server Policy
 
-The Server Policy is the glue. It binds a Virtual Server to a Server Pool and defines
-the service type (HTTP or HTTPS). It is also where protection profiles are attached —
-which is how FortiWeb knows which WAF rules to apply to traffic matching this policy.
+The Server Policy is the glue. It binds a Virtual Server to a Server Pool and defines the service type (HTTP or HTTPS). It is also where protection profiles are attached — which is how FortiWeb knows which WAF rules to apply to traffic matching this policy.
 
 ---
 
 ## Part A: Create the Server Pool
 
-All configuration in this lab is performed on `fweb-ha-vm1` (the configuration Server).
-Changes will be replicated automatically to `fweb-ha-vm2`.
+All configuration in this lab is performed on `fweb-ha-vm1` (the configuration Server). Changes will be replicated automatically to `fweb-ha-vm2`.
 
 ### Step 1: Create the Server Pool
 
@@ -157,6 +98,8 @@ Changes will be replicated automatically to `fweb-ha-vm2`.
 
 2. Click **OK** — the pool is created and you are returned to the pool list
 
+![Server pool creation](images/step1.2-server-pool.png)
+
 > [!NOTE]
 > Selecting **Server Balance** enables the health check option to appear. **Round Robin** distributes requests evenly across pool members in sequence — each application server receives an equal share of traffic, which is ideal for this workshop.
 
@@ -181,6 +124,8 @@ Changes will be replicated automatically to `fweb-ha-vm2`.
 
    Leave all the other settings as default
 
+![Adding a pool member](images/step2.2-pool-member.png)
+
 2. Click **OK**
 
 #### 2.3 Add `app-server-2` as a Pool Member
@@ -200,26 +145,11 @@ Changes will be replicated automatically to `fweb-ha-vm2`.
 
 3. Click **OK**
 
+![Server pool complete](images/step2.3-all-servers.png)
+
 #### 2.4 Save the Server Pool
 
 1. Click **OK** to save the pool with both members
-
-<!--
-#### 2.5 Verify Pool Member Health
-
-1. Navigate back to **Server Objects > Server > Server Pool**
-2. Click on `pool-redwood-app`
-3. In the **Server Pool Member** section, verify both members show a **green** health
-   status indicator
-
-> [!NOTE]
-> If pool members show as **red** or **unknown**, verify that:
-> - The static route `10.0.0.0/16` via `port2` exists (configured in Lab 2)
-> - nginx is running on both application servers
-> - The private IPs entered match the actual IPs of `app-server-1` and `app-server-2`
->
-> Health checks may take up to 30 seconds to complete after the pool is saved.
--->
 
 ### Validation
 
@@ -239,6 +169,8 @@ Changes will be replicated automatically to `fweb-ha-vm2`.
 1. Navigate to **Server Objects > Server > Virtual Server**
 2. Click **+ Create New**
 
+![New Virtual Server](images/step3.1-virtual-server.png)
+
 #### 3.2 Configure the Virtual Server
 
 1. Configure the following:
@@ -248,6 +180,8 @@ Changes will be replicated automatically to `fweb-ha-vm2`.
    | **Name** | `vs-redwood-app` |
 
 2. Click **OK** — the Virtual Server is created
+
+![Configure a Virtual Server](images/step3.2-conf-virtual-server.png)
 
 #### 3.3 Add a Virtual Server Item
 
@@ -263,8 +197,9 @@ IP address and port FortiWeb listens on.
    | **Interface** | `port1` |
    | **Status** | `Enable` |
 
-> [!NOTE]
-> Selecting **Use Interface IP** automatically binds the Virtual Server to the current IP address of `port1` — the interface connected to the `external` subnet. This is the IP address the Azure External Load Balancer forwards traffic to. You do not need to enter the IP manually.
+   > Selecting **Use Interface IP** automatically binds the Virtual Server to the current IP address of `port1` — the interface connected to the `external` subnet. This is the IP address the Azure External Load Balancer forwards traffic to. You do not need to enter the IP manually.
+
+   ![Virtual Server Item](images/step3.3-virtual-server-item.png)
 
 3. Click **OK**
 4. Click **OK** to save the Virtual Server
@@ -277,6 +212,8 @@ IP address and port FortiWeb listens on.
 
 > [!TIP]
 > To verify `port1`'s IP address, navigate to **Network > Interface** and note the IP assigned to `port1`. This should be an address in the `10.0.1.0/24` range.
+
+![Verify Virtual Server IP](images/step3.4-verification.png)
 
 ### Validation
 
@@ -308,10 +245,11 @@ IP address and port FortiWeb listens on.
    | **HTTP Service** | `HTTP` (port 80) |
    | **Web Protection Profile** | `— None —` |
 
-> [!NOTE]
-> **Web Protection Profile** is intentionally left blank (`None`) at this stage. The policy will forward traffic to the application servers without any WAF inspection — this allows you to confirm the traffic path is working correctly before adding protection. The WAF profile will be attached in Lab 4.
+   > **Web Protection Profile** is intentionally left blank (`None`) at this stage. The policy will forward traffic to the application servers without any WAF inspection — this allows you to confirm the traffic path is working correctly before adding protection. The WAF profile will be attached in Lab 4.
 
-1. Click **OK**
+2. Click **OK**
+
+![Server Policy Creation](images/step4.2-create-server-policy.png)
 
 #### 4.3 Verify the Policy is Active
 
@@ -398,6 +336,8 @@ All configuration objects created in this lab (Server Pool, Virtual Server, Serv
 > [!NOTE]
 > If the page does not load immediately, wait 30 seconds and refresh. The Azure Load Balancer health probes need to confirm both FortiWeb nodes are healthy before forwarding traffic.
 
+![Application Server](images/step6.2-app-server.png)
+
 #### 6.3 Confirm Load Balancing Across Both Application Servers
 
 The demo application displays the **hostname of the server that served the request**. By refreshing the page after waiting about 2 minutes, you should see the server name alternate between `app-server-1` and `app-server-2` — confirming that FortiWeb's Round Robin pool is distributing traffic across both backends.
@@ -434,6 +374,8 @@ Confirm that FortiWeb is actively proxying requests — not just passing traffic
 3. On `fweb-ha-vm1`, navigate to **Log&Report > Log Access > Traffic**
 4. You should see entries for the requests you just made. It not, try the `fweb-ha-vm2` FortiWeb logs all proxied traffic now
 
+![Traffic Log](images/step6.4-traffic-log.png)
+
 #### 6.5 Test Attack Detection (Application Only — No WAF Yet)
 
 The demo application has **client-side** attack detection. FortiWeb has no WAF profile
@@ -448,9 +390,10 @@ attached yet — so at this point, attacks reach the application server unblocke
 2. The page should switch to the **attack state** — dark red background, flickering
    animation, and the attack details displayed
 
+   ![App Server Under Attack](images/step6.5-under-attack.png)
+
 > [!NOTE]
-> The application is detecting the payload in the URL and changing its appearance. The request **did reach the application server** — FortiWeb forwarded it without blocking because no protection profile is attached to the policy yet.  
-> This is the **unprotected** baseline you will compare against in Lab 4.
+> The application is detecting the payload in the URL and changing its appearance. The request **did reach the application server** — FortiWeb forwarded it without blocking because no protection profile is attached to the policy yet. This is the **unprotected** baseline you will compare against in Lab 4.
 
 ### Validation
 
@@ -491,30 +434,6 @@ attached yet — so at this point, attacks reach the application server unblocke
 - Round Robin load balancing confirmed across both application servers
 - FortiWeb confirmed in the traffic path via logs
 - Unprotected attack baseline established for Lab 4 comparison
-
-### Architecture Review
-
-```text
-redwood-app-protection-rg (Canada Central)
-│
-├── vnet-app-protection (10.0.0.0/16)
-│   ├── AzureBastionSubnet  (10.0.0.0/26)
-│   ├── external            (10.0.1.0/24)
-│   │   ├── fweb-ha-vm1 port1 ← Virtual Server (vs-redwood-app)
-│   │   └── fweb-ha-vm2 port1 ← Virtual Server (vs-redwood-app)
-│   ├── internal            (10.0.2.0/24)
-│   │   ├── fweb-ha-vm1 port2
-│   │   └── fweb-ha-vm2 port2
-│   └── protected           (10.0.3.0/24)
-│       ├── app-server-1 ← pool-redwood-app member (port 80)
-│       └── app-server-2 ← pool-redwood-app member (port 80)
-│
-├── fweb-ha-loadbalance (External LB — public IP)
-│   ├── → fweb-ha-vm1 port1 → policy-redwood-app → pool-redwood-app
-│   └── → fweb-ha-vm2 port1 → policy-redwood-app → pool-redwood-app
-│
-└── [WAF protection profile — added in Lab 4]
-```
 
 ### Key Takeaways
 

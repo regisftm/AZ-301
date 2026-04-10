@@ -149,6 +149,8 @@ The demo application is installed automatically at first boot using a custom dat
    ./install.sh
    ```
 
+
+
 > [!NOTE]
 > The custom data script clones the demo application repository and runs the installer.
 > The script executes once during the first boot — it runs in the background and may take 2–3 minutes to complete after the VM reaches **Running** state. The application will be available on port 80 once installation finishes.
@@ -238,8 +240,8 @@ Use the same configuration as `app-server-1` with one change:
 
 When both deployments complete, navigate to `redwood-app-protection-rg` and verify:
 
-- ✅ `app-server-1` — Status: **Running**, no public IP, subnet: `protected`
-- ✅ `app-server-2` — Status: **Running**, no public IP, subnet: `protected`
+- [x] `app-server-1` — Status: **Running**, no public IP, subnet: `protected`
+- [x] `app-server-2` — Status: **Running**, no public IP, subnet: `protected`
 
 #### Note the Private IP Addresses
 
@@ -261,8 +263,7 @@ When both deployments complete, navigate to `redwood-app-protection-rg` and veri
 
 ### Step 3: Connect via Azure Bastion
 
-Azure Bastion provides browser-based SSH access to VMs in the `protected` subnet without
-requiring public IPs or a jump host.
+Azure Bastion provides browser-based SSH access to VMs in the `protected` subnet without requiring public IPs or a jump host.
 
 #### 3.1 Connect to `app-server-1`
 
@@ -276,7 +277,7 @@ requiring public IPs or a jump host.
    | --- | --- |
    | **Authentication Type** | `VM Password` |
    | **Username** | `azureuser` |
-   | **Password** | Your `app-server-1` password |
+   | **Password** | `Your app-server-1 password` |
 
 6. Click **Connect**
 
@@ -316,11 +317,22 @@ If the service is not yet running (first boot still in progress), wait 2 minutes
 Confirm the application is listening on port 80:
 
 ```bash
-curl http://localhost
+curl -I http://localhost
 ```
 
-You should receive an HTML response — the page content will include the server hostname
-and a random background colour.
+Expected result:
+
+```console
+HTTP/1.1 200 OK
+Server: nginx/1.24.0 (Ubuntu)
+Date: Thu, 09 Apr 2026 16:08:46 GMT
+Content-Type: text/html
+Content-Length: 8495
+Last-Modified: Thu, 09 Apr 2026 16:01:09 GMT
+Connection: keep-alive
+ETag: "69d7cd45-212f"
+Accept-Ranges: bytes
+```
 
 > [!NOTE]
 > If `curl` returns a connection refused error, the installer is still running. Wait 1–2 minutes and try again. You can monitor progress with: `tail -f /var/log/cloud-init-output.log`
@@ -336,12 +348,12 @@ and a random background colour.
 
 ### Validation
 
-- ✅ Bastion session established to `app-server-1`
-- ✅ `nginx.service` active and running on `app-server-1`
-- ✅ Application responding on `localhost` on `app-server-1`
-- ✅ Bastion session established to `app-server-2`
-- ✅ `nginx.service` active and running on `app-server-2`
-- ✅ Application responding on `localhost` on `app-server-2`
+- [x] Bastion session established to `app-server-1`
+- [x] `nginx.service` active and running on `app-server-1`
+- [x] Application responding on `localhost` on `app-server-1`
+- [x] Bastion session established to `app-server-2`
+- [x] `nginx.service` active and running on `app-server-2`
+- [x] Application responding on `localhost` on `app-server-2`
 
 ---
 
@@ -351,11 +363,9 @@ and a random background colour.
 
 Right now, FortiWeb has a single static route sending all traffic (0.0.0.0/0) via
 `port1` (the `external` subnet gateway at `10.0.1.1`). Without an additional route,
-packets destined for the application servers in `10.0.0.0/16` would exit via `port1`
-instead of `port2`.
+packets destined for the application servers in `10.0.0.0/16` would exit via `port1` instead of `port2`.
 
-A static route for `10.0.0.0/16` via `port2` ensures that all traffic destined for the
-VNet address space leaves FortiWeb through the internal interface.
+A static route for `10.0.0.0/16` via `port2` ensures that all traffic destined for the VNet address space leaves FortiWeb through the internal interface.
 
 > [!NOTE]
 > This route covers the entire `vnet-app-protection` address space (`10.0.0.0/16`), which includes the `internal` (10.0.2.0/24) and `protected` (10.0.3.0/24) subnets. Azure's default gateway on `port2` (`10.0.2.1`) will handle the forwarding from there.
@@ -376,6 +386,8 @@ VNet address space leaves FortiWeb through the internal interface.
 
 6. Click **OK**
 
+![Add static route](images/step4.1-add-static-route.png)
+
 > [!NOTE]
 > The gateway `10.0.2.1` is the default Azure gateway for the `internal` subnet (`10.0.2.0/24`). Azure always reserves the first usable IP in each subnet as the default gateway.
 
@@ -389,10 +401,11 @@ VNet address space leaves FortiWeb through the internal interface.
    | `0.0.0.0/0` | `10.0.1.1` | `port1` |
    | `10.0.0.0/16` | `10.0.2.1` | `port2` |
 
+![Verify routes](images/step4.2-verify-routes.png)
+
 #### 4.3 Sync the Configuration to `fweb-ha-vm2`
 
-Since `fweb-ha-vm2` is configured as the Client, it will automatically pull the updated
-configuration from `fweb-ha-vm1`. Verify the sync completed:
+Since `fweb-ha-vm2` is configured as the Client, it will automatically pull the updated configuration from `fweb-ha-vm1`. Verify the sync completed:
 
 1. Connect to `fweb-ha-vm2` at `https://<fweb-ha-nic-pip2>:8443`
 2. Navigate to **Network > Static Route**
@@ -418,9 +431,15 @@ Expected output:
 
 ```console
 PING 10.0.3.x (10.0.3.x): 56 data bytes
-64 bytes from 10.0.3.x: seq=0 ttl=64 time=1.2 ms
-64 bytes from 10.0.3.x: seq=1 ttl=64 time=0.9 ms
-64 bytes from 10.0.3.x: seq=2 ttl=64 time=1.1 ms
+64 bytes from 10.0.3.x: icmp_seq=1 ttl=64 time=1.0 ms
+64 bytes from 10.0.3.x: icmp_seq=2 ttl=64 time=1.1 ms
+64 bytes from 10.0.3.x: icmp_seq=3 ttl=64 time=0.8 ms
+64 bytes from 10.0.3.x: icmp_seq=4 ttl=64 time=0.8 ms
+64 bytes from 10.0.3.x: icmp_seq=5 ttl=64 time=1.1 ms
+
+--- 10.0.3.x ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max = 0.8/0.9/1.1 ms
 ```
 
 #### 5.3 Ping `app-server-2`
@@ -457,11 +476,11 @@ execute telnet <app-server-2-private-ip>:80
 
 ### Validation
 
-- ✅ Static route `10.0.0.0/16` via `10.0.2.1` (`port2`) created on `fweb-ha-vm1`
-- ✅ Route confirmed present on `fweb-ha-vm2` via config sync
-- ✅ Ping to `app-server-1` private IP successful from `fweb-ha-vm1`
-- ✅ Ping to `app-server-2` private IP successful from `fweb-ha-vm1`
-- ✅ TCP port 80 reachable on both application servers from FortiWeb
+- [x] Static route `10.0.0.0/16` via `10.0.2.1` (`port2`) created on `fweb-ha-vm1`
+- [x] Route confirmed present on `fweb-ha-vm2` via config sync
+- [x] Ping to `app-server-1` private IP successful from `fweb-ha-vm1`
+- [x] Ping to `app-server-2` private IP successful from `fweb-ha-vm1`
+- [x] TCP port 80 reachable on both application servers from FortiWeb
 
 ---
 

@@ -467,7 +467,7 @@ A successful connection opens a socket. Press `Enter` then type `exit` to exit.
 Repeat for `app-server-2`:
 
 ```bash
-execute telnet <app-server-2-private-ip>:80
+execute telnettest <app-server-2-private-ip>:80
 ```
 
 > [!NOTE]

@@ -14,11 +14,6 @@
         "vmSku": {
             "type": "string",
             "defaultValue": "Standard_F2s_v2",
-            "allowedValues": [
-                "Standard_F2s_v2",
-                "Standard_F4s_v2",
-                "Standard_F8s_v2"
-            ],
             "metadata": {
                 "description": "Size of VM in the FortiWeb HA set."
             }

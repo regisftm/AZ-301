@@ -55,11 +55,6 @@ FortiWeb uses three objects to define how traffic flows through the appliance:
 
 ![Traffic Flow](images/fortiweb_traffic_flow.svg)
 
-### Server Pool
-
-The Server Pool defines the group of backend servers that FortiWeb forwards traffic to. Each server in the pool is a **Pool Member** with its own IP address, port, and weight.  
-FortiWeb performs health checks against pool members and removes unhealthy members from rotation automatically.
-
 ### Virtual Server
 
 The Virtual Server defines the IP address and port on which FortiWeb listens for incoming client connections. In this workshop, the Virtual Server uses FortiWeb's `port1` interface IP — the same IP that the Azure External Load Balancer sends traffic to. Clients connect to the load balancer's public IP, which forwards to FortiWeb's `port1` IP, which the Virtual Server intercepts.
@@ -67,6 +62,11 @@ The Virtual Server defines the IP address and port on which FortiWeb listens for
 ### Server Policy
 
 The Server Policy is the glue. It binds a Virtual Server to a Server Pool and defines the service type (HTTP or HTTPS). It is also where protection profiles are attached — which is how FortiWeb knows which WAF rules to apply to traffic matching this policy.
+
+### Server Pool
+
+The Server Pool defines the group of backend servers that FortiWeb forwards traffic to. Each server in the pool is a **Pool Member** with its own IP address, port, and weight.  
+FortiWeb performs health checks against pool members and removes unhealthy members from rotation automatically.
 
 ---
 
@@ -517,6 +517,6 @@ a protection profile may have been accidentally attached to the policy.
 
 ---
 
-*Lab Guide Version 1.0 — April 2026*
+*Lab Guide Version 1.0* — **September 2026**
 
 *Next: [Lab 4 — WAF Protection and Attack Simulation](/az-301-lab4/README.md)*

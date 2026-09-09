@@ -121,7 +121,7 @@ sections:
 
    ![Signatures - Standard Protection](images/step1.3-signatures.png)
 
-3. These are the signatures enabled in the profile. To explore more, click on **Signature Details**
+3. These are the signatures enabled in the profile. To explore more, click on **View Signatures**
 4. Explore the number of signatures available across all categories in the **Dictionaires**.
 
    ![Signatures - Dictionaries](images/step1.3-dictionaries.png)
@@ -577,6 +577,6 @@ All resources created during this workshop — VMs, load balancer, VNet, Bastion
 
 ---
 
-*Lab Guide Version 1.0 — April 2026*
+*Lab Guide Version 1.1* — **September 2026**
 
 *AZ-301 Workshop Complete!*

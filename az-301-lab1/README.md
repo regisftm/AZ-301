@@ -50,24 +50,14 @@ A FortiWeb Active-Active cluster with an Azure External Load Balancer provides:
 
 Unlike Active-Passive HA, FortiWeb Active-Active mode means **both nodes handle production traffic simultaneously**. Configuration is kept in sync between nodes using FortiWeb's built-in configuration replication — covered in Lab 2.
 
-```text
-Traffic Flow (Active-Active):
+![normal_behaviour](images/fortiweb_active_active_traffic_flow.png)
 
-Client Request
-    │
-    ▼
-Azure External Load Balancer
-    ├── Session A → FortiWeb Node 1 (inspects, forwards to app server)
-    ├── Session B → FortiWeb Node 2 (inspects, forwards to app server)
-    └── Session C → FortiWeb Node 1 (load balanced)
+Failure behaviour:
 
-If Node 1 fails:
-    ├── Existing sessions on Node 1: dropped (no session sync in AA mode)
-    └── All new sessions → Node 2 (health probe removes Node 1 from rotation)
-```
+![failure_behaviour](images/fortiweb_active_active_node1_failure.png)
 
 > [!NOTE]
-> Active-Active FortiWeb in this workshop will not synchronise session state between nodes. Clients may need to re-establish connections during a node failure. For most HTTP/HTTPS applications, this is transparent to end users as browsers retry automatically.
+> Although session replication is available in standard Active-Active mode, the Active-Active deployment used in this workshop does not synchronise session state between nodes. If a node fails, clients may need to re-establish their connections. For most HTTP/HTTPS applications this is transparent to end users, since browsers retry automatically.
 
 ### Why an ARM Template?
 
@@ -263,9 +253,10 @@ The `AzureBastionSubnet` should have been created automatically when you enabled
 
 ### Step 6: Create a NAT Gateway for the Protected Subnet
 
-Azure no longer provides default outbound internet access for VMs without a public IP. The application servers in the `protected` subnet will not have public IPs — without an explicit outbound method, the custom data script will fail on first boot because the VM cannot reach the internet, therefore the application server will not work.
+Azure now creates subnets as private by default in new virtual networks (API version 2025-07-01 and later, and the portal since April 2026), so VMs in them get no implicit outbound internet access. The application
+servers in the `protected` subnet have no public IPs, so they need an explicit outbound path — in this lab, a user-defined route sending 0.0.0.0/0 to the FortiGate, which SNATs the traffic out its public interface. Without that route in place before the VMs boot, the custom data script cannot reach package repositories and the application servers will not come up correctly.
 
-A NAT Gateway associated with the `protected` subnet solves this by providing a dedicated, predictable public IP for all outbound traffic originating from that subnet.
+Associating a NAT Gateway with the `protected` subnet resolves this. It provides an explicit outbound path with a dedicated, predictable public IP for all traffic leaving the subnet, without exposing any inbound surface on the application servers.
 
 > [!NOTE]
 > The `external` subnet does **not** need a NAT Gateway — the FortiWeb VMs already have explicit public IPs assigned by the ARM template, which take precedence for outbound connectivity.
@@ -804,6 +795,6 @@ subscriptions — check quota under **Subscriptions > Usage + quotas**
 
 ---
 
-*Lab Guide Version 1.0 — April 2026*
+*Lab Guide Version 1.1* — **September 2026**
 
 *Next: [Lab 2 — Application Server Deployment](/az-301-lab2/README.md)*

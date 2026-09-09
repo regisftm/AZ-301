@@ -637,6 +637,6 @@ In Lab 3, you will:
 
 ---
 
-*Lab Guide Version 1.0 — April 2026*
+*Lab Guide Version 1.1* — **September 2026**
 
 *Next: [Lab 3 — FortiWeb Traffic Steering](/az-301-lab3/README.md)*

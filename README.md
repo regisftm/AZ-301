@@ -113,9 +113,9 @@ previous.
 **Fortinet Documentation:**
 
 - FortiWeb Azure Deployment Guide: <https://docs.fortinet.com/document/fortiweb-public-cloud/latest/deploying-fortiweb-on-azure/640214/system-requirements>
-- FortiWeb Administration Guide: <https://docs.fortinet.com/document/fortiweb/8.0.4/administration-guide/60895/introduction>
+- FortiWeb Administration Guide: <https://docs.fortinet.com/document/fortiweb/8.0.7/administration-guide/60895/introduction>
 - FortiWeb HA Configuration: <https://docs.fortinet.com/document/fortiweb-public-cloud/latest/use-case-high-availability-for-fortiweb-on-azure/277766/overview>
-- FortiFlex Documentation: <https://docs.fortinet.com/product/flex-vm/26.1>
+- FortiFlex Documentation: <https://docs.fortinet.com/product/flex-vm/26.3>
 
 **Azure Documentation:**
 
@@ -131,4 +131,4 @@ previous.
 
 ---
 
-*Workshop Version 1.0 — April 2026*
+*Workshop Version 1.1* — **September 2026**
